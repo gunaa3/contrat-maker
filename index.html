@@ -498,6 +498,7 @@
 </div>
 
 
+<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 <script>
 
 // 다음 주소 검색
@@ -507,10 +508,6 @@ function resetForm() {
 }
 
 function searchAddress() {
-  if (typeof daum === 'undefined' || !daum.Postcode) {
-    alert('주소 검색 서비스를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
-    return;
-  }
   var bg = document.getElementById('daum-postcode-bg');
   var layer = document.getElementById('daum-postcode-layer');
   layer.innerHTML = '';
@@ -853,6 +850,5 @@ async function generateDocx() {
   }
 }
 </script>
-<script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
 </body>
 </html>
