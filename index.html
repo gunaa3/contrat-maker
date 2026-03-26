@@ -280,7 +280,7 @@
     </div>
     <div class="row">
       <div class="field">
-        <label class="required">청구 주소</label>
+        <label>청구 주소</label>
         <div style="display:flex;gap:8px;">
           <input id="billing" type="text" placeholder="주소 검색 버튼을 눌러주세요" style="flex:1;" onclick="if(!this.value)searchAddress()">
           <button onclick="searchAddress()" style="padding:10px 14px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;">🔍 주소 검색</button>
@@ -745,7 +745,7 @@ async function generateDocx() {
   };
 
   // 필수 필드 체크
-  const required = ['date', 'buyer', 'billing', 'product', 'price_num', 'price_kor', 'total_num', 'total_kor', 'balance'];
+  const required = ['date', 'buyer', 'product', 'price_num', 'price_kor', 'total_num', 'total_kor', 'balance'];
   for (const k of required) {
     if (!fields[k]) {
       alert('필수 항목을 모두 입력해주세요: ' + k);
