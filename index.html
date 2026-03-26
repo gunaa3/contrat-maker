@@ -347,8 +347,8 @@
     <div class="row">
       <div class="field">
         <label class="required">단가 (숫자)</label>
-        <input id="price_num" type="text" placeholder="예) 55000000 (₩, 쉼표 없이 입력)" oninput="calcTotal()">
-        <span class="hint">숫자만 입력하면 자동 포맷</span>
+        <input id="price_num" type="text" placeholder="예) 148000000" oninput="calcTotal()" onblur="formatPrice()">
+        <span class="hint">숫자만 입력 → 자동 포맷 + 한글변환</span>
       </div>
       <div class="field">
         <label class="required">단가 (한글)</label>
@@ -611,6 +611,15 @@ function numToKorNoPrefix(num) {
   return result;
 }
 
+// ── 단가 포맷 (포커스 벗어날 때) ────────────────────────
+function formatPrice() {
+  const raw = document.getElementById('price_num').value.replace(/[₩,\s]/g, '');
+  const price = parseInt(raw);
+  if (!isNaN(price) && price > 0) {
+    document.getElementById('price_num').value = '₩' + price.toLocaleString('ko-KR');
+  }
+}
+
 // ── 수량 × 단가 = 총액 자동계산 ──────────────────────────
 function calcTotal() {
   const priceStr = document.getElementById('price_num').value.trim();
@@ -619,17 +628,11 @@ function calcTotal() {
   const price = parseInt(priceRaw);
   if (!isNaN(price) && price > 0) {
     const total = price * qty;
-    const deposit = 10000000 * qty;  // 계약금 1천만 × 수량
+    const deposit = 10000000 * qty;
     const balance = total - deposit;
-
-    // 단가(숫자) 포맷 정리
-    document.getElementById('price_num').value = '₩' + price.toLocaleString('ko-KR');
-    // 단가(한글) 자동변환
     document.getElementById('price_kor').value = numToKor(price);
-    // 총액
     document.getElementById('total_num').value = '₩' + total.toLocaleString('ko-KR');
     document.getElementById('total_kor').value = numToKor(total);
-    // 잔금 = 총액 - 계약금(1천만 × 수량)
     document.getElementById('balance').value = balance > 0 ? numToKorNoPrefix(balance) : '0';
   } else {
     document.getElementById('price_kor').value = '';
