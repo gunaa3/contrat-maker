@@ -282,9 +282,10 @@
       <div class="field">
         <label class="required">청구 주소</label>
         <div style="display:flex;gap:8px;">
-          <input id="billing" type="text" placeholder="주소 검색 버튼을 눌러주세요" readonly style="flex:1;cursor:pointer;" onclick="searchAddress()">
+          <input id="billing" type="text" placeholder="주소 검색 버튼을 눌러주세요" style="flex:1;" onclick="if(!this.value)searchAddress()">
           <button onclick="searchAddress()" style="padding:10px 14px;background:var(--accent);border:none;border-radius:7px;color:white;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;">🔍 주소 검색</button>
         </div>
+        <span class="hint">검색 후 층수·상세주소 직접 추가 가능 (예: 서울 강남구 테헤란로 123, 5층)</span>
       </div>
       <div class="field">
         <label class="required">우편번호</label>
@@ -294,7 +295,7 @@
     <div class="row">
       <div class="field">
         <label>납품 장소</label>
-        <input id="delivery" type="text" placeholder="예) 강남피부과의원 (서울시 강남구)">
+        <input id="delivery" type="text" placeholder="예) 강남피부과의원 (서울시 강남구 5층)">
         <span class="hint" style="cursor:pointer;color:var(--accent);" onclick="syncDelivery()">↑ 청구주소와 동일 (상동)</span>
       </div>
       <div class="field">
