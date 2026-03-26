@@ -347,12 +347,12 @@
     <div class="row">
       <div class="field">
         <label class="required">단가 (숫자)</label>
-        <input id="price_num" type="text" placeholder="예) ₩55,000,000" oninput="calcTotal()">
-        <span class="hint">표시 형식 그대로 입력</span>
+        <input id="price_num" type="text" placeholder="예) 55000000 (₩, 쉼표 없이 입력)" oninput="calcTotal()">
+        <span class="hint">숫자만 입력하면 자동 포맷</span>
       </div>
       <div class="field">
         <label class="required">단가 (한글)</label>
-        <input id="price_kor" type="text" placeholder="예) 금오천오백만원정">
+        <input id="price_kor" type="text" placeholder="자동 계산" readonly style="background:#1e1e2e;color:#aad4ff;cursor:default;">
       </div>
     </div>
     <div class="row">
@@ -375,8 +375,8 @@
     <div class="row single">
       <div class="field">
         <label class="required">잔금 (한글)</label>
-        <input id="balance" type="text" placeholder="예) 사천오백만">
-        <span class="hint">계약금 일천만원 차감 후 잔금</span>
+        <input id="balance" type="text" placeholder="자동 계산" readonly style="background:#1e1e2e;color:#aad4ff;cursor:default;">
+        <span class="hint">총액 - 계약금(₩10,000,000 × 수량) 자동계산</span>
       </div>
     </div>
   </div>
@@ -512,7 +512,6 @@ document.getElementById('product').addEventListener('change', function() {
     document.getElementById('price_kor').value = VBP_PRICE_KOR;
     document.getElementById('qty').value = 1;
     calcTotal();
-    document.getElementById('balance').value = '일억삼천팔백만';
     document.getElementById('vbp_spec_display').value = VBP_SPEC;
     vbpRow.style.display = '';
   } else {
@@ -585,6 +584,33 @@ function numToKor(num) {
   return '금' + result + '원정';
 }
 
+// 잔금용 (금~원정 없이 숫자 단위만)
+function numToKorNoPrefix(num) {
+  if (!num || isNaN(num)) return '';
+  const digits = ['', '일', '이', '삼', '사', '오', '육', '칠', '팔', '구'];
+  const units  = ['', '십', '백', '천'];
+  const bigs   = ['', '만', '억', '조'];
+  let n = Math.floor(Math.abs(num));
+  if (n === 0) return '영';
+  let result = '';
+  let bigIdx = 0;
+  while (n > 0) {
+    let chunk = n % 10000;
+    if (chunk > 0) {
+      let chunkStr = '';
+      for (let i = 0; i < 4; i++) {
+        let d = chunk % 10;
+        if (d > 0) chunkStr = (d === 1 && i > 0 ? '' : digits[d]) + units[i] + chunkStr;
+        chunk = Math.floor(chunk / 10);
+      }
+      result = chunkStr + bigs[bigIdx] + result;
+    }
+    bigIdx++;
+    n = Math.floor(n / 10000);
+  }
+  return result;
+}
+
 // ── 수량 × 단가 = 총액 자동계산 ──────────────────────────
 function calcTotal() {
   const priceStr = document.getElementById('price_num').value.trim();
@@ -593,11 +619,23 @@ function calcTotal() {
   const price = parseInt(priceRaw);
   if (!isNaN(price) && price > 0) {
     const total = price * qty;
+    const deposit = 10000000 * qty;  // 계약금 1천만 × 수량
+    const balance = total - deposit;
+
+    // 단가(숫자) 포맷 정리
+    document.getElementById('price_num').value = '₩' + price.toLocaleString('ko-KR');
+    // 단가(한글) 자동변환
+    document.getElementById('price_kor').value = numToKor(price);
+    // 총액
     document.getElementById('total_num').value = '₩' + total.toLocaleString('ko-KR');
     document.getElementById('total_kor').value = numToKor(total);
+    // 잔금 = 총액 - 계약금(1천만 × 수량)
+    document.getElementById('balance').value = balance > 0 ? numToKorNoPrefix(balance) : '0';
   } else {
+    document.getElementById('price_kor').value = '';
     document.getElementById('total_num').value = '';
     document.getElementById('total_kor').value = '';
+    document.getElementById('balance').value = '';
   }
 }
 
