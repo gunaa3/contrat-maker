@@ -479,6 +479,7 @@ function searchAddress() {
       let addr = data.roadAddress || data.jibunAddress;
       document.getElementById('billing').value = addr;
       document.getElementById('post').value = data.zonecode;
+      document.getElementById('delivery').value = '상동';
       closePostcode();
     },
     width: '100%',
