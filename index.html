@@ -373,11 +373,18 @@
         <input id="total_kor" type="text" placeholder="자동 계산" readonly style="background:#1e1e2e;color:#aad4ff;cursor:default;">
       </div>
     </div>
+    <div class="row">
+      <div class="field">
+        <label>계약금 (1대당)</label>
+        <input id="deposit" type="text" placeholder="10000000" value="10000000" oninput="calcTotal()" onblur="formatDeposit()">
+        <span class="hint">수량 × 계약금 = 총 계약금 / 잔금 자동계산</span>
+      </div>
+    </div>
     <div class="row single">
       <div class="field">
         <label class="required">잔금 (한글)</label>
         <input id="balance" type="text" placeholder="자동 계산" readonly style="background:#1e1e2e;color:#aad4ff;cursor:default;">
-        <span class="hint">총액 - 계약금(₩10,000,000 × 수량) 자동계산</span>
+        <span class="hint">총액 - (계약금 × 수량) 자동계산</span>
       </div>
     </div>
   </div>
@@ -613,7 +620,14 @@ function numToKorNoPrefix(num) {
   return result;
 }
 
-// ── 단가 포맷 (포커스 벗어날 때) ────────────────────────
+// ── 계약금 포맷 (포커스 벗어날 때) ──────────────────────
+function formatDeposit() {
+  const raw = document.getElementById('deposit').value.replace(/[₩,\s]/g, '');
+  const dep = parseInt(raw);
+  if (!isNaN(dep) && dep > 0) {
+    document.getElementById('deposit').value = dep.toLocaleString('ko-KR');
+  }
+}
 function formatPrice() {
   const raw = document.getElementById('price_num').value.replace(/[₩,\s]/g, '');
   const price = parseInt(raw);
@@ -630,7 +644,9 @@ function calcTotal() {
   const price = parseInt(priceRaw);
   if (!isNaN(price) && price > 0) {
     const total = price * qty;
-    const deposit = 10000000 * qty;
+    const depositRaw = document.getElementById('deposit').value.replace(/[₩,\s]/g, '');
+    const depositPer = parseInt(depositRaw) || 10000000;
+    const deposit = depositPer * qty;
     const balance = total - deposit;
     document.getElementById('price_kor').value = numToKor(price);
     document.getElementById('total_num').value = '₩' + total.toLocaleString('ko-KR');
