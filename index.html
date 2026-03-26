@@ -339,13 +339,7 @@
         <input id="warranty" type="text" placeholder="제품 선택 시 자동 입력 (수정 가능)">
       </div>
     </div>
-    <div class="row single" id="vbp_spec_row" style="display:none;">
-      <div class="field">
-        <label>VBP 상세 (자동 입력)</label>
-        <input id="vbp_spec_display" type="text" readonly style="background:#1a1a22;color:#888898;">
-      </div>
     </div>
-    <div class="row">
       <div class="field">
         <label class="required">단가 (숫자)</label>
         <input id="price_num" type="text" placeholder="예) 148000000" oninput="calcTotal()" onblur="formatPrice()">
@@ -399,6 +393,17 @@
         <!-- 제품 미선택 안내 -->
         <div id="spec-placeholder" style="padding:12px;border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:12px;text-align:center;margin-bottom:12px;">
           ↑ 위에서 제품을 선택하면 세부 특약 항목이 표시됩니다.
+        </div>
+
+        <!-- ── VBP ── -->
+        <div class="spec-group" data-product="Vbeam Perfecta" style="display:none;margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--accent);margin-bottom:8px;font-weight:600;">Vbeam Perfecta</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <label class="spec-chip"><input type="checkbox" class="spec-check vbp-default" data-text="DYE+PM : 3 Set" onchange="updateSpecification()" checked><span>DYE+PM : 3 Set</span></label>
+            <label class="spec-chip"><input type="checkbox" class="spec-check vbp-default" data-text="DCD : 3 box" onchange="updateSpecification()" checked><span>DCD : 3 box</span></label>
+            <label class="spec-chip"><input type="checkbox" class="spec-check" data-text="DYE+PM : 4 Set" onchange="updateSpecification()"><span>DYE+PM : 4 Set</span></label>
+            <label class="spec-chip"><input type="checkbox" class="spec-check" data-text="DCD : 4 box" onchange="updateSpecification()"><span>DCD : 4 box</span></label>
+          </div>
         </div>
 
         <!-- ── GentleMax Pro Plus ── -->
@@ -521,16 +526,12 @@ document.getElementById('product').addEventListener('change', function() {
     document.getElementById('price_kor').value = VBP_PRICE_KOR;
     document.getElementById('qty').value = 1;
     calcTotal();
-    document.getElementById('vbp_spec_display').value = VBP_SPEC;
-    vbpRow.style.display = '';
   } else {
     if (val && val !== '기타 (직접 입력)') {
       warranty.value = DEFAULT_WARRANTY;
     } else {
       warranty.value = '';
     }
-    vbpRow.style.display = 'none';
-    document.getElementById('vbp_spec_display').value = '';
   }
 
   // ── 특약 그룹 토글 ──
@@ -558,9 +559,13 @@ function updateSpecGroups(productVal) {
 
   placeholder.style.display = 'none';
 
-  // 해당 제품 그룹만 표시 (VBP는 그룹 없으니까 아무것도 안 뜸)
+  // 해당 제품 그룹만 표시
   document.querySelectorAll('.spec-group').forEach(g => {
-    if (g.dataset.product === val) g.style.display = 'block';
+    if (g.dataset.product === val) {
+      g.style.display = 'block';
+      // VBP 기본 체크 항목 자동 체크
+      g.querySelectorAll('input.vbp-default').forEach(cb => { cb.checked = true; });
+    }
   });
 
   updateSpecification();
@@ -719,8 +724,7 @@ async function generateDocx() {
   const productVal = getVal('product') === '기타 (직접 입력)' ? getVal('product_custom') : getVal('product');
   const isVBP = productVal === 'Vbeam Perfecta';
   const warrantyRaw = getVal('warranty');
-  // VBP일 경우 warranty에 상세 스펙 추가
-  const warrantyFull = isVBP ? warrantyRaw + ' (' + VBP_SPEC + ')' : warrantyRaw;
+  const warrantyFull = warrantyRaw;
 
   const fields = {
     refer: document.getElementById('refer_base').value + document.getElementById('refer_suffix').value,
