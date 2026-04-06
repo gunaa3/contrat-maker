@@ -824,11 +824,6 @@ async function generateDocx() {
         .replace(/'/g, '&apos;');
     }
 
-    // 제품명 분리 처리 (product_a = 첫단어, product_b = 나머지)
-    const productParts = fields.product.split(' ');
-    const productA = productParts[0] || '';
-    const productB = productParts.length > 1 ? ' ' + productParts.slice(1).join(' ') : '';
-
     const replacements = {
       '{{ refer }}': escapeXml(fields.refer),
       '{{ date }}': escapeXml(fields.date),
@@ -838,8 +833,7 @@ async function generateDocx() {
       '{{ post }}': escapeXml(fields.post),
       '{{ delivery }}': escapeXml(fields.delivery),
       '{{ phone }}': escapeXml(fields.phone),
-      '{{ product_a }}': escapeXml(productA),
-      '{{ product_b }}': escapeXml(productB),
+      '{{ product }}': escapeXml(fields.product),
       '{{ warranty }}': escapeXml(fields.warranty),
       '{{ price_num }}': escapeXml(fields.price_num),
       '{{ price_kor }}': escapeXml(fields.price_kor),
