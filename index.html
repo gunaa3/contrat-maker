@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>\ubc30\ucc28 \uc0dd\uc131\uae30</title>
+<title>배차 생성기</title>
 <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_KEY&libraries=services"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -67,7 +67,7 @@
     margin-top: 2px;
   }
 
-  /* \ub450 \ud328\ub110 \ub808\uc774\uc544\uc6c3 */
+  /* 두 패널 레이아웃 */
   .panels {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -117,7 +117,7 @@
     color: var(--primary);
   }
 
-  /* \ud3fc \uc694\uc18c */
+  /* 폼 요소 */
   .field {
     margin-bottom: 12px;
     position: relative;
@@ -156,7 +156,7 @@
     background: #f0fdf4;
   }
 
-  /* \uac80\uc0c9 \uacb0\uacfc \ub4dc\ub86d\ub2e4\uc6b4 */
+  /* 검색 결과 드롭다운 */
   .dropdown {
     position: absolute;
     top: calc(100% + 2px);
@@ -195,7 +195,7 @@
     margin-top: 2px;
   }
 
-  /* \uc9c0\ub3c4 */
+  /* 지도 */
   .map-wrap {
     margin-top: 12px;
     border-radius: 10px;
@@ -207,7 +207,7 @@
   .map-wrap.show { display: block; }
   .map-wrap div { border-radius: 10px; }
 
-  /* \uc7a5\ube44 + \uba54\ubaa8 \uce74\ub4dc */
+  /* 장비 + 메모 카드 */
   .extra-card {
     background: var(--surface);
     border-radius: 16px;
@@ -224,7 +224,7 @@
     .extra-card { grid-template-columns: 1fr; }
   }
 
-  /* \uacb0\uacfc \uce74\ub4dc */
+  /* 결과 카드 */
   .result-card {
     background: var(--primary);
     border-radius: 16px;
@@ -257,7 +257,7 @@
     min-height: 240px;
   }
 
-  /* \ubc84\ud2bc */
+  /* 버튼 */
   .btn-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -303,7 +303,7 @@
     color: #fff;
   }
 
-  /* \uc5f0\ub77d\ucc98 \ubc43\uc9c0 */
+  /* 연락처 뱃지 */
   .contact-hint {
     font-size: 11px;
     color: var(--muted);
@@ -311,7 +311,7 @@
     padding-left: 2px;
   }
 
-  /* \uc2a4\ud06c\ub864\ubc14 */
+  /* 스크롤바 */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #d0d5e8; border-radius: 4px; }
@@ -322,32 +322,32 @@
 <div class="container">
 
   <div class="header">
-    <div class="header-icon">\ud83d\ude9b</div>
+    <div class="header-icon">🚛</div>
     <div>
-      <h1>\ubc30\ucc28 \uc0dd\uc131\uae30</h1>
-      <p>\uc0c1\ud558\ucc28 \uc815\ubcf4\ub97c \uc785\ub825\ud558\uace0 \ubc30\ucc28 \uba54\uc2dc\uc9c0\ub97c \uc790\ub3d9 \uc0dd\uc131\ud569\ub2c8\ub2e4</p>
+      <h1>배차 생성기</h1>
+      <p>상하차 정보를 입력하고 배차 메시지를 자동 생성합니다</p>
     </div>
   </div>
 
-  <!-- \uc0c1\ucc28 / \ud558\ucc28 \ud328\ub110 -->
+  <!-- 상차 / 하차 패널 -->
   <div class="panels">
 
-    <!-- \uc0c1\ucc28 -->
+    <!-- 상차 -->
     <div class="card">
       <div class="card-header">
-        <div class="badge badge-up">\u2191</div>
-        <span class="label">\uc0c1\ucc28\uc9c0</span>
+        <div class="badge badge-up">↑</div>
+        <span class="label">상차지</span>
       </div>
 
       <div class="field" style="position:relative">
-        <label>\uc7a5\uc18c \uac80\uc0c9</label>
-        <input id="pickup" type="text" placeholder="\uc9c0\uba85, \uc8fc\uc18c, \uac70\ub798\ucc98\uba85 \uac80\uc0c9">
+        <label>장소 검색</label>
+        <input id="pickup" type="text" placeholder="지명, 주소, 거래처명 검색">
         <div id="pickupDropdown" class="dropdown"></div>
       </div>
 
       <div class="field">
-        <label>\uc120\ud0dd\ub41c \uc8fc\uc18c</label>
-        <input id="pickupAddress" type="text" placeholder="\uac80\uc0c9 \ud6c4 \uc790\ub3d9 \uc785\ub825" readonly class="selected" style="color:#065f46; font-size:12px;">
+        <label>선택된 주소</label>
+        <input id="pickupAddress" type="text" placeholder="검색 후 자동 입력" readonly class="selected" style="color:#065f46; font-size:12px;">
       </div>
 
       <div class="map-wrap" id="pickupMapWrap">
@@ -355,33 +355,33 @@
       </div>
 
       <div class="field" style="margin-top:12px">
-        <label>\uc0c1\ucc28 \uc77c\uc2dc</label>
-        <input id="pickupTime" type="text" placeholder="\uc608) 05/20(\uc6d4) 09:00">
+        <label>상차 일시</label>
+        <input id="pickupTime" type="text" placeholder="예) 05/20(월) 09:00">
       </div>
 
       <div class="field">
-        <label>\ub2f4\ub2f9\uc790</label>
-        <input id="pickupManager" type="text" placeholder="\uc774\ub984 \uc785\ub825" list="managerList">
+        <label>담당자</label>
+        <input id="pickupManager" type="text" placeholder="이름 입력" list="managerList">
         <div class="contact-hint" id="pickupContactHint"></div>
       </div>
     </div>
 
-    <!-- \ud558\ucc28 -->
+    <!-- 하차 -->
     <div class="card">
       <div class="card-header">
-        <div class="badge badge-down">\u2193</div>
-        <span class="label">\ud558\ucc28\uc9c0</span>
+        <div class="badge badge-down">↓</div>
+        <span class="label">하차지</span>
       </div>
 
       <div class="field" style="position:relative">
-        <label>\uc7a5\uc18c \uac80\uc0c9</label>
-        <input id="drop" type="text" placeholder="\uc9c0\uba85, \uc8fc\uc18c, \uac70\ub798\ucc98\uba85 \uac80\uc0c9">
+        <label>장소 검색</label>
+        <input id="drop" type="text" placeholder="지명, 주소, 거래처명 검색">
         <div id="dropDropdown" class="dropdown"></div>
       </div>
 
       <div class="field">
-        <label>\uc120\ud0dd\ub41c \uc8fc\uc18c</label>
-        <input id="dropAddress" type="text" placeholder="\uac80\uc0c9 \ud6c4 \uc790\ub3d9 \uc785\ub825" readonly class="selected" style="color:#065f46; font-size:12px;">
+        <label>선택된 주소</label>
+        <input id="dropAddress" type="text" placeholder="검색 후 자동 입력" readonly class="selected" style="color:#065f46; font-size:12px;">
       </div>
 
       <div class="map-wrap" id="dropMapWrap">
@@ -389,73 +389,73 @@
       </div>
 
       <div class="field" style="margin-top:12px">
-        <label>\ud558\ucc28 \uc77c\uc2dc</label>
-        <input id="dropTime" type="text" placeholder="\uc608) 05/20(\uc6d4) 13:00">
+        <label>하차 일시</label>
+        <input id="dropTime" type="text" placeholder="예) 05/20(월) 13:00">
       </div>
 
       <div class="field">
-        <label>\ub2f4\ub2f9\uc790</label>
-        <input id="dropManager" type="text" placeholder="\uc774\ub984 \uc785\ub825" list="managerList">
+        <label>담당자</label>
+        <input id="dropManager" type="text" placeholder="이름 입력" list="managerList">
         <div class="contact-hint" id="dropContactHint"></div>
       </div>
     </div>
 
   </div>
 
-  <!-- \uc7a5\ube44 + \uba54\ubaa8 -->
+  <!-- 장비 + 메모 -->
   <div class="extra-card">
     <div class="field" style="margin-bottom:0">
-      <label>\uc7a5\ube44\uba85</label>
-      <input id="equipment" type="text" placeholder="\uc608) Nordlys, PicoWay \ub4f1">
+      <label>장비명</label>
+      <input id="equipment" type="text" placeholder="예) Nordlys, PicoWay 등">
     </div>
     <div class="field" style="margin-bottom:0">
-      <label>\ube44\uace0 / \uba54\ubaa8</label>
-      <input id="memo" type="text" placeholder="\ud2b9\uc774\uc0ac\ud56d \uc788\uc73c\uba74 \uc785\ub825">
+      <label>비고 / 메모</label>
+      <input id="memo" type="text" placeholder="특이사항 있으면 입력">
     </div>
   </div>
 
-  <!-- \uc0dd\uc131 \ubc84\ud2bc -->
+  <!-- 생성 버튼 -->
   <div style="margin-bottom:16px;">
     <button class="btn btn-primary" style="width:100%; padding:14px;" onclick="generate()">
-      \u2726 \ubc30\ucc28 \uba54\uc2dc\uc9c0 \uc0dd\uc131
+      ✦ 배차 메시지 생성
     </button>
   </div>
 
-  <!-- \uacb0\uacfc -->
+  <!-- 결과 -->
   <div class="result-card">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h3>\uc0dd\uc131\ub41c \uba54\uc2dc\uc9c0</h3>
-      <button class="btn btn-copy" id="copyBtn" onclick="copyText()">\ud83d\udccb \ubcf5\uc0ac</button>
+      <h3>생성된 메시지</h3>
+      <button class="btn btn-copy" id="copyBtn" onclick="copyText()">📋 복사</button>
     </div>
-    <textarea id="result" readonly placeholder="\uc704\uc5d0\uc11c \uc815\ubcf4\ub97c \uc785\ub825 \ud6c4 \uc0dd\uc131 \ubc84\ud2bc\uc744 \ub204\ub974\uc138\uc694."></textarea>
+    <textarea id="result" readonly placeholder="위에서 정보를 입력 후 생성 버튼을 누르세요."></textarea>
   </div>
 
 </div>
 
 <!-- datalist for manager autocomplete -->
 <datalist id="managerList">
-  <option value="\uae40\uae30\ud6c8">
-  <option value="\ubc15\uc724\uc544">
-  <option value="\uae40\uc131\ud6c8">
-  <option value="\uc774\uac00\ub78c">
+  <option value="김기훈">
+  <option value="박윤아">
+  <option value="김성훈">
+  <option value="이가람">
 </datalist>
 
 <script>
-// \u2500\u2500\u2500 \uc124\uc815 \ub370\uc774\ud130 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── 설정 데이터 ───────────────────────────────────────────
 const contactMap = {
-  "\uae40\uae30\ud6c8": "010-3899-1656",
-  "\ubc15\uc724\uc544": "010-3020-0568",
-  "\uae40\uc131\ud6c8": "010-5419-6263",
-  "\uc774\uac00\ub78c": "010-9294-6541"
+  "김기훈": "010-3899-1656",
+  "박윤아": "010-3020-0568",
+  "김성훈": "010-5419-6263",
+  "이가람": "010-9294-6541"
 };
 
-// \uc790\uc8fc \uc4f0\ub294 \uac70\ub798\ucc98 \ub2e8\ucd95 \ud0a4\uc6cc\ub4dc
+// 자주 쓰는 거래처 단축 키워드
 const locationMap = {
-  "\uc6a9\ub9c8": { name: "\uae40\ud3ec \uc6a9\ub9c8\ucc3d\uace0", address: "\uacbd\uae30\ub3c4 \uae40\ud3ec\uc2dc \uace0\ucd0c\uc74d \uc544\ub77c\uc721\ub85c 58\ubc88\uae38 35-28", lat: 37.608, lng: 126.762 },
-  "\uc11c\ucd08": { name: "\uc11c\ucd08 \uc0ac\ubb34\uc2e4",   address: "\uc11c\uc6b8 \uc11c\ucd08\uad6c \uac15\ub0a8\ub300\ub85c 327 3\uce35",              lat: 37.496, lng: 127.028 }
+  "용마": { name: "김포 용마창고", address: "경기도 김포시 고촌읍 아라육로 58번길 35-28", lat: 37.608, lng: 126.762 },
+  "서초": { name: "서초 사무실",   address: "서울 서초구 강남대로 327 3층",              lat: 37.496, lng: 127.028 }
 };
 
-// \u2500\u2500\u2500 \uce74\uce74\uc624 Place \uc11c\ube44\uc2a4 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── 카카오 Place 서비스 ───────────────────────────────────
 const ps = new kakao.maps.services.Places();
 
 let pickupData = { name: "", address: "", lat: null, lng: null };
@@ -463,4 +463,172 @@ let dropData   = { name: "", address: "", lat: null, lng: null };
 let pickupMap  = null;
 let dropMap    = null;
 
-// \u2500\u2500\u2500 \uac80\uc0c9 & \ub4dc\ub86d\ub2e4\uc6b4 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── 검색 & 드롭다운 ──────────────────────────────────────
+function setupSearch(inputId, dropdownId, mapWrapId, mapDivId, store, addressInputId, contactHintId) {
+  const input     = document.getElementById(inputId);
+  const dropdown  = document.getElementById(dropdownId);
+  const addrInput = document.getElementById(addressInputId);
+  const hint      = document.getElementById(contactHintId);
+
+  input.addEventListener("input", () => {
+    const val = input.value.trim();
+    if (!val) { dropdown.classList.remove("open"); return; }
+
+    // 단축 키워드 먼저
+    for (const key in locationMap) {
+      if (val.includes(key)) {
+        const loc = locationMap[key];
+        selectLocation(loc.name, loc.address, loc.lat, loc.lng,
+          input, addrInput, dropdown, mapWrapId, mapDivId, store);
+        return;
+      }
+    }
+
+    // 카카오 실검색
+    ps.keywordSearch(val, (result, status) => {
+      if (status !== kakao.maps.services.Status.OK) {
+        dropdown.classList.remove("open");
+        return;
+      }
+      renderDropdown(result, dropdown, input, addrInput, mapWrapId, mapDivId, store);
+    });
+  });
+
+  // 담당자 연락처 자동 힌트
+  if (hint) {
+    const mgr = document.getElementById(inputId === "pickup" ? "pickupManager" : "dropManager");
+    if (mgr) {
+      mgr.addEventListener("input", () => {
+        const phone = contactMap[mgr.value.trim()];
+        hint.textContent = phone ? `📞 ${phone}` : "";
+      });
+    }
+  }
+
+  // 외부 클릭 시 닫기
+  document.addEventListener("click", (e) => {
+    if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.remove("open");
+    }
+  });
+}
+
+function renderDropdown(places, dropdown, input, addrInput, mapWrapId, mapDivId, store) {
+  dropdown.innerHTML = "";
+  places.slice(0, 8).forEach(p => {
+    const item = document.createElement("div");
+    item.className = "dropdown-item";
+    item.innerHTML = `<div class="place-name">${p.place_name}</div><div class="place-addr">${p.address_name}</div>`;
+    item.addEventListener("click", () => {
+      selectLocation(p.place_name, p.address_name, parseFloat(p.y), parseFloat(p.x),
+        input, addrInput, dropdown, mapWrapId, mapDivId, store);
+    });
+    dropdown.appendChild(item);
+  });
+  dropdown.classList.add("open");
+}
+
+function selectLocation(name, address, lat, lng, input, addrInput, dropdown, mapWrapId, mapDivId, store) {
+  input.value    = name;
+  addrInput.value = address;
+  dropdown.classList.remove("open");
+
+  store.name    = name;
+  store.address = address;
+  store.lat     = lat;
+  store.lng     = lng;
+
+  showMap(mapWrapId, mapDivId, lat, lng, name, store);
+}
+
+// ─── 지도 표시 ────────────────────────────────────────────
+function showMap(wrapId, divId, lat, lng, title, store) {
+  const wrap = document.getElementById(wrapId);
+  wrap.classList.add("show");
+
+  const container = document.getElementById(divId);
+  const coords = new kakao.maps.LatLng(lat, lng);
+
+  if (!store._map) {
+    store._map = new kakao.maps.Map(container, { center: coords, level: 4 });
+    store._marker = new kakao.maps.Marker({ map: store._map, position: coords, title });
+  } else {
+    store._map.setCenter(coords);
+    store._marker.setPosition(coords);
+    store._marker.setTitle(title);
+  }
+}
+
+// ─── 메시지 생성 ──────────────────────────────────────────
+function generate() {
+  const pickupTime    = document.getElementById("pickupTime").value.trim();
+  const pickupManager = document.getElementById("pickupManager").value.trim();
+  const dropTime      = document.getElementById("dropTime").value.trim();
+  const dropManager   = document.getElementById("dropManager").value.trim();
+  const equipment     = document.getElementById("equipment").value.trim();
+  const memo          = document.getElementById("memo").value.trim();
+
+  const pickPhone = contactMap[pickupManager] || "";
+  const dropPhone = contactMap[dropManager]   || "";
+
+  let text = `[상차]\n`;
+  text += `상차 : ${pickupData.name || "(미입력)"}\n`;
+  text += `일시 : ${pickupTime || "(조율가능)"}\n`;
+  text += `장비명 : ${equipment || "(미입력)"}\n`;
+  text += `주소 : ${pickupData.address || "(미입력)"}\n`;
+  text += `담당자 : ${pickupManager || "(미입력)"}`;
+  if (pickPhone) text += `\n연락처 : ${pickPhone}`;
+
+  text += `\n\n[하차]\n`;
+  text += `하차 : ${dropData.name || "(미입력)"}\n`;
+  text += `일시 : ${dropTime || "(조율가능)"}\n`;
+  text += `장비명 : ${equipment || "(미입력)"}\n`;
+  text += `주소 : ${dropData.address || "(미입력)"}\n`;
+  text += `담당자 : ${dropManager || "(미입력)"}`;
+  if (dropPhone) text += `\n연락처 : ${dropPhone}`;
+
+  if (memo) text += `\n\n[비고]\n${memo}`;
+
+  document.getElementById("result").value = text;
+}
+
+// ─── 복사 ─────────────────────────────────────────────────
+function copyText() {
+  const ta = document.getElementById("result");
+  if (!ta.value) return;
+
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.getElementById("copyBtn");
+    btn.textContent = "✓ 복사됨";
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.textContent = "📋 복사";
+      btn.classList.remove("copied");
+    }, 2000);
+  }).catch(() => {
+    ta.select();
+    document.execCommand("copy");
+  });
+}
+
+// ─── 초기화 ───────────────────────────────────────────────
+setupSearch("pickup", "pickupDropdown", "pickupMapWrap", "pickupMap",
+  pickupData, "pickupAddress", "pickupContactHint");
+
+setupSearch("drop", "dropDropdown", "dropMapWrap", "dropMap",
+  dropData, "dropAddress", "dropContactHint");
+
+// manager hint for pickup
+document.getElementById("pickupManager").addEventListener("input", function() {
+  const phone = contactMap[this.value.trim()];
+  document.getElementById("pickupContactHint").textContent = phone ? `📞 ${phone}` : "";
+});
+
+document.getElementById("dropManager").addEventListener("input", function() {
+  const phone = contactMap[this.value.trim()];
+  document.getElementById("dropContactHint").textContent = phone ? `📞 ${phone}` : "";
+});
+</script>
+
+</body>
+</html>
