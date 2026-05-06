@@ -23275,7 +23275,7 @@ var __async = (__this, __arguments, generator) => {
 
 <header>
   <div class="logo">SYNERON <span>CANDELA</span> KOREA</div>
-  <div style="font-size:12px;color:#aaa;">데모장비 신청 시스템 &nbsp;<span style="background:#2a2a4e;color:#6ec6f5;font-size:11px;padding:2px 8px;border-radius:4px;letter-spacing:0.04em;">v3.0</span></div>
+  <div style="font-size:12px;color:#aaa;">데모장비 신청 시스템 &nbsp;<span style="background:#2a2a4e;color:#6ec6f5;font-size:11px;padding:2px 8px;border-radius:4px;letter-spacing:0.04em;">v4.0</span></div>
 </header>
 
 <div class="container">
@@ -23660,362 +23660,212 @@ async function downloadWord() {
             AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign } = docx;
 
     const fmt = s => s || '';
-    // A4: 11906 DXA wide, margins ~720 each side (~1.27cm)
-    const PAGE_W = 11906;
-    const MARGIN = 720;
-    const CW = PAGE_W - MARGIN * 2; // 10466
-
-    // Column widths matching Excel: A≈20.75, B≈25.19, C≈20.75, D≈25.19 (ratio ~45:55 split each half)
-    const cA = Math.round(CW * 0.235); // label
-    const cB = Math.round(CW * 0.265); // value
-    const cC = Math.round(CW * 0.235); // label
-    const cD = CW - cA - cB - cC;     // value
-
-    const PURPLE = '6E2B62';
-    const BORD_T = { style: BorderStyle.THIN, size: 4, color: '999999' };
-    const BORD_N = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-    const allBorders = { top: BORD_T, bottom: BORD_T, left: BORD_T, right: BORD_T };
-    const noBorders  = { top: BORD_N, bottom: BORD_N, left: BORD_N, right: BORD_N };
-
+    const PAGE_W = 11906, MARGIN = 720, CW = PAGE_W - MARGIN * 2; // A4
+    // 원본 열 비율: A(라벨)≈22%, B(값)≈28%, C(라벨)≈22%, D(값)≈28%
+    const cA = Math.round(CW * 0.22);
+    const cB = Math.round(CW * 0.28);
+    const cC = Math.round(CW * 0.22);
+    const cD = CW - cA - cB - cC;
     const KR = 'Malgun Gothic';
-    const SZ_TITLE = 28; // 14pt
-    const SZ_BODY  = 20; // 10pt
-    const SZ_SM    = 18; // 9pt
+    const PURPLE = '6E2B62';
+    const GRAY_BG = 'F2F2F2';
 
-    // ── Cell builders ──────────────────────────────────────────────────────
-    function labelCell(text, w, opts={}) {
-      return new TableCell({
+    const BT = { style: BorderStyle.SINGLE, size: 4, color: 'AAAAAA' };
+    const allB = { top: BT, bottom: BT, left: BT, right: BT };
+    const noB  = undefined;
+
+    // ── 기본 셀 빌더 ─────────────────────────────────────────────────────
+    function mkCell(text, w, {bold=false, bg=null, color='000000', colSpan=1, rowSpan=1,
+                               borders=allB, vAlign=VerticalAlign.CENTER, size=20,
+                               align=AlignmentType.LEFT, height=null}={}) {
+      const cell = new TableCell({
         width: { size: w, type: WidthType.DXA },
-        borders: opts.noBorder ? noBorders : allBorders,
-        shading: opts.bg ? { fill: opts.bg, type: ShadingType.CLEAR } : undefined,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 100, right: 60 },
-        rowSpan: opts.rowSpan,
-        columnSpan: opts.colSpan,
+        borders,
+        columnSpan: colSpan,
+        rowSpan,
+        verticalAlign: vAlign,
+        margins: { top: 60, bottom: 60, left: 120, right: 80 },
+        shading: bg ? { fill: bg, type: ShadingType.CLEAR } : undefined,
         children: [new Paragraph({
-          alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
-          children: [new TextRun({
-            text,
-            bold: true,
-            size: opts.size || SZ_BODY,
-            font: KR,
-            color: opts.color || '000000',
-          })]
+          alignment: align,
+          children: [new TextRun({ text, bold, size, font: KR, color })]
         })]
       });
+      return cell;
     }
 
-    function valueCell(text, w, opts={}) {
-      return new TableCell({
-        width: { size: w, type: WidthType.DXA },
-        borders: opts.noBorder ? noBorders : allBorders,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 100, right: 60 },
-        rowSpan: opts.rowSpan,
-        columnSpan: opts.colSpan,
-        children: [new Paragraph({
-          children: [new TextRun({
-            text,
-            size: opts.size || SZ_BODY,
-            font: KR,
-            color: opts.color || '000000',
-          })]
-        })]
-      });
+    function lbl(text, w, opts={}) {
+      return mkCell(text, w, { bold: true, bg: GRAY_BG, ...opts });
+    }
+    function val(text, w, opts={}) {
+      return mkCell(text, w, { bold: false, ...opts });
+    }
+    function empty(w, opts={}) { return val('', w, opts); }
+
+    function row(cells, heightVal=400) {
+      return new TableRow({ height: { value: heightVal, rule: 'atLeast' }, children: cells });
     }
 
-    function emptyCell(w, opts={}) {
-      return valueCell('', w, opts);
-    }
+    // ── 타이틀 행 (보라 배경, 흰 글씨) ─────────────────────────────────
+    const titleRow = row([
+      mkCell('켄델라 코리아 장비 사용신청서', CW, {
+        bold: true, size: 32, color: 'FFFFFF', bg: PURPLE,
+        colSpan: 4, align: AlignmentType.CENTER, borders: noB
+      })
+    ], 560);
 
-    // ── Title row ─────────────────────────────────────────────────────────
-    // Full-width purple title
-    const titleRow = new TableRow({
-      height: { value: 520, rule: 'atLeast' },
-      children: [new TableCell({
-        columnSpan: 4,
-        width: { size: CW, type: WidthType.DXA },
-        borders: noBorders,
-        shading: { fill: PURPLE, type: ShadingType.CLEAR },
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 80, bottom: 80, left: 200, right: 200 },
-        children: [new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: '켄델라 코리아 장비 사용신청서', bold: true, size: 32, font: KR, color: 'FFFFFF' })]
-        })]
-      })]
+    // ── [데모장비 요청내역] 텍스트 (테두리 없음) ──────────────────────
+    const subtitlePara = new Paragraph({
+      spacing: { before: 120, after: 60 },
+      children: [new TextRun({ text: '[데모장비 요청내역]', bold: true, size: 20, font: KR })]
     });
 
-    // ── Subtitle row ──────────────────────────────────────────────────────
-    const subtitleRow = new TableRow({
-      height: { value: 440, rule: 'atLeast' },
-      children: [new TableCell({
-        columnSpan: 4,
-        width: { size: CW, type: WidthType.DXA },
-        borders: allBorders,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 200, right: 200 },
-        children: [new Paragraph({
-          alignment: AlignmentType.CENTER,
-          children: [new TextRun({ text: '[데모장비 요청내역]', bold: true, size: SZ_TITLE, font: KR })]
-        })]
-      })]
+    // ── 데이터 행들 ──────────────────────────────────────────────────────
+    const rows = [];
+
+    // 신청일자 / 신청목적
+    rows.push(row([
+      lbl('신청일자', cA), val(fmt(d.applyDate), cB),
+      lbl('신청목적', cC), val(fmt(d.applyPurpose), cD),
+    ]));
+    // 신청부서 / 신청자
+    rows.push(row([
+      lbl('신청부서', cA), val(fmt(d.dept), cB),
+      lbl('신청자', cC), val(fmt(d.applicant), cD),
+    ]));
+    // 대상병원명 / 원장님 성함
+    rows.push(row([
+      lbl('대상병원명', cA), val(fmt(d.hospital), cB),
+      lbl('원장님 성함', cC), val(fmt(d.director), cD),
+    ]));
+    // 주소 (전체 너비)
+    rows.push(row([
+      lbl('주소', cA),
+      val(fmt(d.address), cB+cC+cD, { colSpan: 3 }),
+    ]));
+    // 병원 연락처 / 원장님 연락처
+    rows.push(row([
+      lbl('병원 연락처', cA), val(fmt(d.hospitalTel), cB),
+      lbl('원장님 연락처', cC), val(fmt(d.directorTel), cD),
+    ]));
+
+    // 신청 장비 - 장비마다 2행 (시스템/핸드피스 + 기타)
+    d.equipments.forEach(eq => {
+      rows.push(row([
+        lbl('신청 장비\n(시스템)', cA),
+        val(fmt(eq.system), cB),
+        lbl('신청 장비\n(핸드피스)', cC),
+        val(fmt(eq.hp), cD),
+      ]));
+      rows.push(row([
+        empty(cA),
+        val(eq.note ? fmt(eq.note) : '(기타 내용 기재)', cB),
+        empty(cC),
+        val('(기타 내용 기재)', cD),
+      ], 280));
     });
 
-    // ── Helper: 2-col header section row ──────────────────────────────────
-    function sectionRow(text) {
-      return new TableRow({
-        height: { value: 380, rule: 'atLeast' },
-        children: [new TableCell({
-          columnSpan: 4,
-          width: { size: CW, type: WidthType.DXA },
-          borders: noBorders,
-          shading: { fill: 'F2F2F2', type: ShadingType.CLEAR },
-          verticalAlign: VerticalAlign.CENTER,
-          margins: { top: 60, bottom: 60, left: 120, right: 120 },
+    // 장비 사용기간
+    rows.push(row([
+      lbl('장비 사용기간', cA), val(fmt(d.useStart), cB),
+      val('~', cC, { align: AlignmentType.CENTER }),
+      val(fmt(d.useEnd), cD),
+    ]));
+
+    // 요청 및 기타 사항 (라벨 전체너비)
+    rows.push(row([
+      lbl('요청 및 기타 사항', CW, { colSpan: 4, bg: null }),
+    ]));
+
+    // 기대효과 (큰 셀)
+    rows.push(new TableRow({
+      height: { value: 2800, rule: 'atLeast' },
+      children: [
+        lbl('기대효과', cA, { vAlign: VerticalAlign.TOP }),
+        new TableCell({
+          columnSpan: 3,
+          width: { size: cB+cC+cD, type: WidthType.DXA },
+          borders: allB,
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 100, bottom: 100, left: 120, right: 80 },
           children: [new Paragraph({
-            children: [new TextRun({ text, bold: true, size: SZ_BODY, font: KR })]
+            children: [new TextRun({ text: fmt(d.effect), size: 20, font: KR })]
           })]
-        })]
-      });
-    }
+        })
+      ]
+    }));
 
-    // ── 4-col data row ────────────────────────────────────────────────────
-    function dataRow4(l1, v1, l2, v2, opts={}) {
-      return new TableRow({
-        height: { value: 380, rule: 'atLeast' },
+    // 요청사항 있으면 추가
+    if (d.request) {
+      rows.push(new TableRow({
+        height: { value: 600, rule: 'atLeast' },
         children: [
-          labelCell(l1, cA),
-          valueCell(v1, cB),
-          labelCell(l2, cC),
-          valueCell(v2, cD),
-        ]
-      });
-    }
-
-    // full-width label + value (A=label, B+C+D=value)
-    function dataRowFull(label, value, opts={}) {
-      return new TableRow({
-        height: { value: opts.height || 380, rule: 'atLeast' },
-        children: [
-          labelCell(label, cA),
+          lbl('요청사항', cA, { vAlign: VerticalAlign.TOP }),
           new TableCell({
             columnSpan: 3,
             width: { size: cB+cC+cD, type: WidthType.DXA },
-            borders: allBorders,
-            verticalAlign: VerticalAlign.CENTER,
-            margins: { top: 60, bottom: 60, left: 100, right: 60 },
+            borders: allB,
+            verticalAlign: VerticalAlign.TOP,
+            margins: { top: 100, bottom: 100, left: 120, right: 80 },
             children: [new Paragraph({
-              children: [new TextRun({ text: value, size: SZ_BODY, font: KR })]
+              children: [new TextRun({ text: fmt(d.request), size: 20, font: KR })]
             })]
           })
         ]
-      });
-    }
-
-    // ── Equipment rows ────────────────────────────────────────────────────
-    // "신청 장비 (시스템)" | system | "신청 장비 (핸드피스)" | hp
-    // (기타내용기재)       | note   | (기타내용기재)          | note_hp
-    function equipmentRows(eq) {
-      const rows = [];
-      rows.push(new TableRow({
-        height: { value: 380, rule: 'atLeast' },
-        children: [
-          labelCell('신청 장비\n(시스템)', cA),
-          valueCell(fmt(eq.system), cB),
-          labelCell('신청 장비\n(핸드피스)', cC),
-          valueCell(fmt(eq.hp), cD),
-        ]
       }));
-      if (eq.note) {
-        rows.push(new TableRow({
-          height: { value: 280, rule: 'atLeast' },
-          children: [
-            emptyCell(cA),
-            valueCell('(기타) ' + eq.note, cB + cC + cD, { colSpan: 3 }),
-          ]
-        }));
-      }
-      return rows;
     }
 
-    // ── 사용기간 row ──────────────────────────────────────────────────────
-    const periodRow = new TableRow({
-      height: { value: 380, rule: 'atLeast' },
-      children: [
-        labelCell('장비 사용기간', cA),
-        valueCell(fmt(d.useStart), cB),
-        labelCell('~', cC, { center: true }),
-        valueCell(fmt(d.useEnd), cD),
-      ]
-    });
-
-    // ── 요청 및 기타사항 header row ───────────────────────────────────────
-    const requestHeaderRow = new TableRow({
-      height: { value: 380, rule: 'atLeast' },
-      children: [new TableCell({
-        columnSpan: 4,
-        width: { size: CW, type: WidthType.DXA },
-        borders: allBorders,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 120, right: 120 },
-        children: [new Paragraph({
-          children: [new TextRun({ text: '요청 및 기타 사항', bold: true, size: SZ_BODY, font: KR })]
-        })]
-      })]
-    });
-
-    // ── 기대효과 row (tall) ───────────────────────────────────────────────
-    const effectRow = new TableRow({
-      height: { value: 1200, rule: 'atLeast' },
-      children: [
-        labelCell('기대효과', cA),
-        new TableCell({
-          columnSpan: 3,
-          width: { size: cB+cC+cD, type: WidthType.DXA },
-          borders: allBorders,
-          verticalAlign: VerticalAlign.TOP,
-          margins: { top: 100, bottom: 100, left: 100, right: 60 },
-          children: [new Paragraph({
-            children: [new TextRun({ text: fmt(d.effect), size: SZ_BODY, font: KR })]
-          })]
-        })
-      ]
-    });
-
-    // ── 요청사항 row ───────────────────────────────────────────────────────
-    const requestRow = new TableRow({
-      height: { value: 600, rule: 'atLeast' },
-      children: [
-        labelCell('요청사항', cA),
-        new TableCell({
-          columnSpan: 3,
-          width: { size: cB+cC+cD, type: WidthType.DXA },
-          borders: allBorders,
-          verticalAlign: VerticalAlign.TOP,
-          margins: { top: 100, bottom: 100, left: 100, right: 60 },
-          children: [new Paragraph({
-            children: [new TextRun({ text: fmt(d.request), size: SZ_BODY, font: KR })]
-          })]
-        })
-      ]
-    });
-
-    // ── Notice rows ───────────────────────────────────────────────────────
-    function noticeRow(text) {
-      return new TableRow({
-        height: { value: 240, rule: 'atLeast' },
-        children: [new TableCell({
-          columnSpan: 4,
-          width: { size: CW, type: WidthType.DXA },
-          borders: noBorders,
-          margins: { top: 20, bottom: 20, left: 120, right: 120 },
-          children: [new Paragraph({
-            children: [new TextRun({ text, size: SZ_SM, font: KR, color: '555555' })]
-          })]
-        })]
-      });
-    }
-
-    // ── 부서장 승인 ───────────────────────────────────────────────────────
-    const approvalHeaderRow = new TableRow({
-      height: { value: 380, rule: 'atLeast' },
-      children: [new TableCell({
-        columnSpan: 4,
-        width: { size: CW, type: WidthType.DXA },
-        borders: allBorders,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 120, right: 120 },
-        children: [new Paragraph({
-          children: [new TextRun({ text: '[부서장 승인]', bold: true, size: SZ_BODY, font: KR })]
-        })]
-      })]
-    });
-
-    const approvalRow = new TableRow({
-      height: { value: 380, rule: 'atLeast' },
-      children: [
-        labelCell('부서장 이름', cA),
-        valueCell(fmt(d.managerName), cB),
-        labelCell('승인일자', cC),
-        valueCell(fmt(d.approvalDate), cD),
-      ]
-    });
-
-    // 서명란 row
-    const sigRow = new TableRow({
-      height: { value: 700, rule: 'atLeast' },
-      children: [
-        emptyCell(cA),
-        emptyCell(cB),
-        labelCell('(인)', cC, { center: true }),
-        emptyCell(cD),
-      ]
-    });
-
-    // ── 장비 배정 section ──────────────────────────────────────────────────
-    const assignHeaderRow = new TableRow({
-      height: { value: 380, rule: 'atLeast' },
-      children: [new TableCell({
-        columnSpan: 4,
-        width: { size: CW, type: WidthType.DXA },
-        borders: allBorders,
-        verticalAlign: VerticalAlign.CENTER,
-        margins: { top: 60, bottom: 60, left: 120, right: 120 },
-        children: [new Paragraph({
-          children: [new TextRun({ text: '[장비 배정]', bold: true, size: SZ_BODY, font: KR })]
-        })]
-      })]
-    });
-
-    const eqs = d.equipments;
-    const firstEq = eqs[0] || {};
-    const assignItemRow = dataRow4('품목', fmt(firstEq.system), '', '');
-    const assignPeriodRow = dataRow4('출고일시', fmt(d.useStart), '회수일시', fmt(d.useEnd));
-    const assignConfirmRow = dataRow4('출고확인', '', '회수확인', '');
-
-    // ── Build all equipment rows ───────────────────────────────────────────
-    const allEqRows = d.equipments.flatMap(eq => equipmentRows(eq));
-
-    // ── Assemble main table ────────────────────────────────────────────────
+    // ── 메인 테이블 ───────────────────────────────────────────────────────
     const mainTable = new Table({
       width: { size: CW, type: WidthType.DXA },
       columnWidths: [cA, cB, cC, cD],
+      rows: [titleRow, ...rows]
+    });
+
+    // ── 주의사항 (테이블 밖 텍스트) ──────────────────────────────────────
+    const notices = [
+      'DEMO는 장비의 임상결과를 확인하는 방법으로, 이로 인해 병원의 수익을 얻을 수 없습니다.',
+      '출고 장비 및 구성품에 대해서는 담당자에게 그 책임이 있으며 분실 시 비용 청구를 진행할 수 있습니다.',
+      '장비 및 구성품의 분실이 3회이상 될 경우, 해당 담당자는 DEMO진행이 불가하게 됩니다.',
+    ].map(t => new Paragraph({
+      spacing: { before: 0, after: 40 },
+      children: [new TextRun({ text: t, size: 16, font: KR, color: '555555' })]
+    }));
+
+    // ── [부서장 승인] 테이블 ──────────────────────────────────────────────
+    const approvalTable = new Table({
+      width: { size: CW, type: WidthType.DXA },
+      columnWidths: [cA, cB, cC, cD],
       rows: [
-        titleRow,
-        subtitleRow,
-        // 신청 정보
-        dataRow4('신청일자', fmt(d.applyDate), '신청목적', fmt(d.applyPurpose)),
-        dataRow4('신청부서', fmt(d.dept), '신청자', fmt(d.applicant)),
-        // 병원 정보
-        dataRow4('대상병원명', fmt(d.hospital), '원장님 성함', fmt(d.director)),
-        dataRowFull('주소', fmt(d.address)),
-        dataRow4('병원 연락처', fmt(d.hospitalTel), '원장님 연락처', fmt(d.directorTel)),
-        // 장비
-        ...allEqRows,
-        // 사용기간
-        periodRow,
-        // 요청사항
-        requestHeaderRow,
-        effectRow,
-        ...(d.request ? [requestRow] : []),
-        // Notices
-        noticeRow('DEMO는 장비의 임상결과를 확인하는 방법으로, 이로 인해 병원의 수익을 얻을 수 없습니다.'),
-        noticeRow('출고 장비 및 구성품에 대해서는 담당자에게 그 책임이 있으며 분실 시 비용 청구를 진행할 수 있습니다.'),
-        noticeRow('장비 및 구성품의 분실이 3회이상 될 경우, 해당 담당자는 DEMO진행이 불가하게 됩니다.'),
-        // 부서장 승인
-        approvalHeaderRow,
-        approvalRow,
-        sigRow,
-        // 장비 배정
-        assignHeaderRow,
-        assignItemRow,
-        assignPeriodRow,
-        assignConfirmRow,
+        row([
+          lbl('부서장 이름', cA), val(fmt(d.managerName), cB),
+          lbl('승인일자', cC), val(fmt(d.approvalDate), cD),
+        ]),
+        row([empty(cA), empty(cB), empty(cC), empty(cD)], 700),
       ]
     });
 
-    // ── Document ──────────────────────────────────────────────────────────
+    // ── [장비 배정] 테이블 ────────────────────────────────────────────────
+    const firstEq = d.equipments[0] || {};
+    const assignTable = new Table({
+      width: { size: CW, type: WidthType.DXA },
+      columnWidths: [cA, cB, cC, cD],
+      rows: [
+        row([lbl('품목', cA), val(fmt(firstEq.system), cB), empty(cC), empty(cD)]),
+        row([lbl('출고일시', cA), val(fmt(d.useStart), cB), lbl('회수일시', cC), val(fmt(d.useEnd), cD)]),
+        row([lbl('출고확인', cA), empty(cB), lbl('회수확인', cC), empty(cD)]),
+      ]
+    });
+
+    // ── 섹션 타이틀 헬퍼 ─────────────────────────────────────────────────
+    function sectionTitle(text) {
+      return new Paragraph({
+        spacing: { before: 240, after: 80 },
+        children: [new TextRun({ text, bold: true, size: 20, font: KR })]
+      });
+    }
+
+    // ── Document 조립 ─────────────────────────────────────────────────────
     const doc = new Document({
       sections: [{
         properties: {
@@ -24024,7 +23874,15 @@ async function downloadWord() {
             margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN }
           }
         },
-        children: [mainTable]
+        children: [
+          subtitlePara,
+          mainTable,
+          ...notices,
+          sectionTitle('[부서장 승인]'),
+          approvalTable,
+          sectionTitle('[장비 배정]'),
+          assignTable,
+        ]
       }]
     });
 
@@ -24039,7 +23897,7 @@ async function downloadWord() {
     URL.revokeObjectURL(url);
 
   } catch(err) {
-    alert('Word 파일 생성 중 오류:\\n' + err.message);
+    alert('Word 파일 생성 중 오류:\n' + err.message);
     console.error(err);
   }
 }
