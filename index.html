@@ -23275,7 +23275,7 @@ var __async = (__this, __arguments, generator) => {
 
 <header>
   <div class="logo">SYNERON <span>CANDELA</span> KOREA</div>
-  <div style="font-size:12px;color:#aaa;">데모장비 신청 시스템</div>
+  <div style="font-size:12px;color:#aaa;">데모장비 신청 시스템 &nbsp;<span style="background:#2a2a4e;color:#6ec6f5;font-size:11px;padding:2px 8px;border-radius:4px;letter-spacing:0.04em;">v3.0</span></div>
 </header>
 
 <div class="container">
@@ -23655,328 +23655,391 @@ Candela는 위 장비를 고객이 상기 주소에서 종료일까지 사용할
 // ─── Word download ─────────────────────────────────────────────────────────
 async function downloadWord() {
   try {
-  const d = getFormData();
-  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-          AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign,
-          PageBreak, HeadingLevel } = docx;
+    const d = getFormData();
+    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+            AlignmentType, BorderStyle, WidthType, ShadingType, VerticalAlign } = docx;
 
-  const fmt = s => s || '';
-  const W = 11906, M = 1134; // A4, ~2cm margins
-  const CW = W - M*2;       // content width in DXA
+    const fmt = s => s || '';
+    // A4: 11906 DXA wide, margins ~720 each side (~1.27cm)
+    const PAGE_W = 11906;
+    const MARGIN = 720;
+    const CW = PAGE_W - MARGIN * 2; // 10466
 
-  const BORDER_NONE = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
-  const BORDER_THIN = { style: BorderStyle.SINGLE, size: 4, color: "CCCCCC" };
-  const BORDER_MED  = { style: BorderStyle.SINGLE, size: 6, color: "1a1a2e" };
+    // Column widths matching Excel: A≈20.75, B≈25.19, C≈20.75, D≈25.19 (ratio ~45:55 split each half)
+    const cA = Math.round(CW * 0.235); // label
+    const cB = Math.round(CW * 0.265); // value
+    const cC = Math.round(CW * 0.235); // label
+    const cD = CW - cA - cB - cC;     // value
 
-  const blankRow = () => new Paragraph({ children: [new TextRun("")], spacing:{after:160} });
+    const PURPLE = '6E2B62';
+    const BORD_T = { style: BorderStyle.THIN, size: 4, color: '999999' };
+    const BORD_N = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+    const allBorders = { top: BORD_T, bottom: BORD_T, left: BORD_T, right: BORD_T };
+    const noBorders  = { top: BORD_N, bottom: BORD_N, left: BORD_N, right: BORD_N };
 
-  // ── helper: two-col info row ──
-  function infoRow(label1, val1, label2, val2) {
-    const half = Math.floor(CW/2);
-    const cellStyle = (lbl, val) => new TableCell({
-      borders: { top: BORDER_NONE, bottom: BORDER_NONE, left: BORDER_NONE, right: BORDER_NONE },
-      width: { size: half, type: WidthType.DXA },
-      children: [new Paragraph({
+    const KR = 'Malgun Gothic';
+    const SZ_TITLE = 28; // 14pt
+    const SZ_BODY  = 20; // 10pt
+    const SZ_SM    = 18; // 9pt
+
+    // ── Cell builders ──────────────────────────────────────────────────────
+    function labelCell(text, w, opts={}) {
+      return new TableCell({
+        width: { size: w, type: WidthType.DXA },
+        borders: opts.noBorder ? noBorders : allBorders,
+        shading: opts.bg ? { fill: opts.bg, type: ShadingType.CLEAR } : undefined,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 100, right: 60 },
+        rowSpan: opts.rowSpan,
+        columnSpan: opts.colSpan,
+        children: [new Paragraph({
+          alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+          children: [new TextRun({
+            text,
+            bold: true,
+            size: opts.size || SZ_BODY,
+            font: KR,
+            color: opts.color || '000000',
+          })]
+        })]
+      });
+    }
+
+    function valueCell(text, w, opts={}) {
+      return new TableCell({
+        width: { size: w, type: WidthType.DXA },
+        borders: opts.noBorder ? noBorders : allBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 100, right: 60 },
+        rowSpan: opts.rowSpan,
+        columnSpan: opts.colSpan,
+        children: [new Paragraph({
+          children: [new TextRun({
+            text,
+            size: opts.size || SZ_BODY,
+            font: KR,
+            color: opts.color || '000000',
+          })]
+        })]
+      });
+    }
+
+    function emptyCell(w, opts={}) {
+      return valueCell('', w, opts);
+    }
+
+    // ── Title row ─────────────────────────────────────────────────────────
+    // Full-width purple title
+    const titleRow = new TableRow({
+      height: { value: 520, rule: 'atLeast' },
+      children: [new TableCell({
+        columnSpan: 4,
+        width: { size: CW, type: WidthType.DXA },
+        borders: noBorders,
+        shading: { fill: PURPLE, type: ShadingType.CLEAR },
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 80, bottom: 80, left: 200, right: 200 },
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: '켄델라 코리아 장비 사용신청서', bold: true, size: 32, font: KR, color: 'FFFFFF' })]
+        })]
+      })]
+    });
+
+    // ── Subtitle row ──────────────────────────────────────────────────────
+    const subtitleRow = new TableRow({
+      height: { value: 440, rule: 'atLeast' },
+      children: [new TableCell({
+        columnSpan: 4,
+        width: { size: CW, type: WidthType.DXA },
+        borders: allBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 200, right: 200 },
+        children: [new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: '[데모장비 요청내역]', bold: true, size: SZ_TITLE, font: KR })]
+        })]
+      })]
+    });
+
+    // ── Helper: 2-col header section row ──────────────────────────────────
+    function sectionRow(text) {
+      return new TableRow({
+        height: { value: 380, rule: 'atLeast' },
+        children: [new TableCell({
+          columnSpan: 4,
+          width: { size: CW, type: WidthType.DXA },
+          borders: noBorders,
+          shading: { fill: 'F2F2F2', type: ShadingType.CLEAR },
+          verticalAlign: VerticalAlign.CENTER,
+          margins: { top: 60, bottom: 60, left: 120, right: 120 },
+          children: [new Paragraph({
+            children: [new TextRun({ text, bold: true, size: SZ_BODY, font: KR })]
+          })]
+        })]
+      });
+    }
+
+    // ── 4-col data row ────────────────────────────────────────────────────
+    function dataRow4(l1, v1, l2, v2, opts={}) {
+      return new TableRow({
+        height: { value: 380, rule: 'atLeast' },
         children: [
-          new TextRun({ text: lbl+': ', bold: true, size: 20, font: 'Malgun Gothic' }),
-          new TextRun({ text: val || '', size: 20, font: 'Malgun Gothic' }),
+          labelCell(l1, cA),
+          valueCell(v1, cB),
+          labelCell(l2, cC),
+          valueCell(v2, cD),
         ]
+      });
+    }
+
+    // full-width label + value (A=label, B+C+D=value)
+    function dataRowFull(label, value, opts={}) {
+      return new TableRow({
+        height: { value: opts.height || 380, rule: 'atLeast' },
+        children: [
+          labelCell(label, cA),
+          new TableCell({
+            columnSpan: 3,
+            width: { size: cB+cC+cD, type: WidthType.DXA },
+            borders: allBorders,
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 60, bottom: 60, left: 100, right: 60 },
+            children: [new Paragraph({
+              children: [new TextRun({ text: value, size: SZ_BODY, font: KR })]
+            })]
+          })
+        ]
+      });
+    }
+
+    // ── Equipment rows ────────────────────────────────────────────────────
+    // "신청 장비 (시스템)" | system | "신청 장비 (핸드피스)" | hp
+    // (기타내용기재)       | note   | (기타내용기재)          | note_hp
+    function equipmentRows(eq) {
+      const rows = [];
+      rows.push(new TableRow({
+        height: { value: 380, rule: 'atLeast' },
+        children: [
+          labelCell('신청 장비\n(시스템)', cA),
+          valueCell(fmt(eq.system), cB),
+          labelCell('신청 장비\n(핸드피스)', cC),
+          valueCell(fmt(eq.hp), cD),
+        ]
+      }));
+      if (eq.note) {
+        rows.push(new TableRow({
+          height: { value: 280, rule: 'atLeast' },
+          children: [
+            emptyCell(cA),
+            valueCell('(기타) ' + eq.note, cB + cC + cD, { colSpan: 3 }),
+          ]
+        }));
+      }
+      return rows;
+    }
+
+    // ── 사용기간 row ──────────────────────────────────────────────────────
+    const periodRow = new TableRow({
+      height: { value: 380, rule: 'atLeast' },
+      children: [
+        labelCell('장비 사용기간', cA),
+        valueCell(fmt(d.useStart), cB),
+        labelCell('~', cC, { center: true }),
+        valueCell(fmt(d.useEnd), cD),
+      ]
+    });
+
+    // ── 요청 및 기타사항 header row ───────────────────────────────────────
+    const requestHeaderRow = new TableRow({
+      height: { value: 380, rule: 'atLeast' },
+      children: [new TableCell({
+        columnSpan: 4,
+        width: { size: CW, type: WidthType.DXA },
+        borders: allBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({
+          children: [new TextRun({ text: '요청 및 기타 사항', bold: true, size: SZ_BODY, font: KR })]
+        })]
       })]
     });
-    return new TableRow({ children: [cellStyle(label1,val1), cellStyle(label2,val2)] });
-  }
 
-  function infoTable(rows) {
-    return new Table({
-      width: { size: CW, type: WidthType.DXA },
-      columnWidths: [Math.floor(CW/2), Math.floor(CW/2)],
-      borders: { top:BORDER_NONE, bottom:BORDER_NONE, left:BORDER_NONE, right:BORDER_NONE, insideH:BORDER_NONE, insideV:BORDER_NONE },
-      rows
-    });
-  }
-
-  // ── helper: section header ──
-  function sectionHeader(text) {
-    return new Paragraph({
-      children: [new TextRun({ text, bold: true, size: 22, color: 'FFFFFF', font: 'Malgun Gothic' })],
-      shading: { fill: '1a1a2e', type: ShadingType.CLEAR },
-      spacing: { before: 200, after: 80 },
-      indent: { left: 120 },
-    });
-  }
-
-  // ── Equipment list rows ──
-  function equipmentRows() {
-    return d.equipments.map((eq, i) => new TableRow({
+    // ── 기대효과 row (tall) ───────────────────────────────────────────────
+    const effectRow = new TableRow({
+      height: { value: 1200, rule: 'atLeast' },
       children: [
+        labelCell('기대효과', cA),
         new TableCell({
-          borders: { top:BORDER_THIN, bottom:BORDER_THIN, left:BORDER_THIN, right:BORDER_THIN },
-          width: { size: Math.floor(CW*0.05), type: WidthType.DXA },
-          shading: { fill: 'f0f0f0', type: ShadingType.CLEAR },
-          margins: { top:60, bottom:60, left:80, right:80 },
-          children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: String(i+1), size: 20, font: 'Malgun Gothic' })] })]
-        }),
-        new TableCell({
-          borders: { top:BORDER_THIN, bottom:BORDER_THIN, left:BORDER_THIN, right:BORDER_THIN },
-          width: { size: Math.floor(CW*0.28), type: WidthType.DXA },
-          margins: { top:60, bottom:60, left:100, right:100 },
-          children: [new Paragraph({ children: [new TextRun({ text: fmt(eq.system), size: 20, font: 'Malgun Gothic' })] })]
-        }),
-        new TableCell({
-          borders: { top:BORDER_THIN, bottom:BORDER_THIN, left:BORDER_THIN, right:BORDER_THIN },
-          width: { size: Math.floor(CW*0.28), type: WidthType.DXA },
-          margins: { top:60, bottom:60, left:100, right:100 },
-          children: [new Paragraph({ children: [new TextRun({ text: fmt(eq.hp), size: 20, font: 'Malgun Gothic' })] })]
-        }),
-        new TableCell({
-          borders: { top:BORDER_THIN, bottom:BORDER_THIN, left:BORDER_THIN, right:BORDER_THIN },
-          width: { size: Math.floor(CW*0.39), type: WidthType.DXA },
-          margins: { top:60, bottom:60, left:100, right:100 },
-          children: [new Paragraph({ children: [new TextRun({ text: fmt(eq.note), size: 20, font: 'Malgun Gothic' })] })]
-        }),
-      ]
-    }));
-  }
-
-  function equipmentHeaderRow() {
-    const hdrs = ['No','시스템','핸드피스','기타'];
-    const widths = [Math.floor(CW*0.05), Math.floor(CW*0.28), Math.floor(CW*0.28), Math.floor(CW*0.39)];
-    return new TableRow({
-      children: hdrs.map((h,i) => new TableCell({
-        borders: { top:BORDER_THIN, bottom:BORDER_THIN, left:BORDER_THIN, right:BORDER_THIN },
-        width: { size: widths[i], type: WidthType.DXA },
-        shading: { fill: '1a1a2e', type: ShadingType.CLEAR },
-        margins: { top:80, bottom:80, left:100, right:100 },
-        children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: h, bold: true, size: 20, color: 'FFFFFF', font: 'Malgun Gothic' })] })]
-      }))
-    });
-  }
-
-  // ── Signature row ──
-  function sigTable(left, right) {
-    const half = Math.floor(CW/2)-100;
-    const cell = (label, name) => new TableCell({
-      borders: { top:BORDER_NONE, bottom:BORDER_NONE, left:BORDER_NONE, right:BORDER_NONE },
-      width: { size: half, type: WidthType.DXA },
-      children: [
-        new Paragraph({ children: [new TextRun({ text: label, bold: true, size: 20, font: 'Malgun Gothic' })] }),
-        new Paragraph({ children: [new TextRun({ text: name || '________________', size: 20, font: 'Malgun Gothic' })], spacing:{after:300} }),
-        new Paragraph({
-          border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: '999999' } },
-          spacing: { before: 200 },
-          children: [new TextRun({ text: '                    (인)', size: 20, font: 'Malgun Gothic', color: '999999' })]
-        }),
+          columnSpan: 3,
+          width: { size: cB+cC+cD, type: WidthType.DXA },
+          borders: allBorders,
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 100, bottom: 100, left: 100, right: 60 },
+          children: [new Paragraph({
+            children: [new TextRun({ text: fmt(d.effect), size: SZ_BODY, font: KR })]
+          })]
+        })
       ]
     });
-    return new Table({
-      width: { size: CW, type: WidthType.DXA },
-      columnWidths: [half, 200, half],
-      borders: { top:BORDER_NONE, bottom:BORDER_NONE, left:BORDER_NONE, right:BORDER_NONE, insideH:BORDER_NONE, insideV:BORDER_NONE },
-      rows: [new TableRow({ children: [
-        cell(left[0], left[1]),
-        new TableCell({ borders:{top:BORDER_NONE,bottom:BORDER_NONE,left:BORDER_NONE,right:BORDER_NONE}, width:{size:200,type:WidthType.DXA}, children:[new Paragraph({children:[]})] }),
-        cell(right[0], right[1]),
-      ]})]
+
+    // ── 요청사항 row ───────────────────────────────────────────────────────
+    const requestRow = new TableRow({
+      height: { value: 600, rule: 'atLeast' },
+      children: [
+        labelCell('요청사항', cA),
+        new TableCell({
+          columnSpan: 3,
+          width: { size: cB+cC+cD, type: WidthType.DXA },
+          borders: allBorders,
+          verticalAlign: VerticalAlign.TOP,
+          margins: { top: 100, bottom: 100, left: 100, right: 60 },
+          children: [new Paragraph({
+            children: [new TextRun({ text: fmt(d.request), size: SZ_BODY, font: KR })]
+          })]
+        })
+      ]
     });
-  }
 
-  // ══════════════════════════════════════════
-  //  PAGE 1: 데모장비 신청서
-  // ══════════════════════════════════════════
-  const page1 = [
-    // Title
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: 240 },
-      children: [new TextRun({ text: '켄델라 코리아 장비 사용신청서', bold: true, size: 32, font: 'Malgun Gothic' })]
-    }),
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-      children: [new TextRun({ text: '[ 데모장비 요청내역 ]', size: 22, color: '555555', font: 'Malgun Gothic' })]
-    }),
+    // ── Notice rows ───────────────────────────────────────────────────────
+    function noticeRow(text) {
+      return new TableRow({
+        height: { value: 240, rule: 'atLeast' },
+        children: [new TableCell({
+          columnSpan: 4,
+          width: { size: CW, type: WidthType.DXA },
+          borders: noBorders,
+          margins: { top: 20, bottom: 20, left: 120, right: 120 },
+          children: [new Paragraph({
+            children: [new TextRun({ text, size: SZ_SM, font: KR, color: '555555' })]
+          })]
+        })]
+      });
+    }
 
-    sectionHeader('신청 정보'),
-    new Paragraph({ spacing:{after:80}, children:[] }),
-    infoTable([
-      infoRow('신청일자', fmt(d.applyDate), '신청목적', fmt(d.applyPurpose)),
-      infoRow('신청부서', fmt(d.dept), '신청자', fmt(d.applicant)),
-    ]),
-
-    new Paragraph({ spacing:{before:240, after:80}, children:[] }),
-    sectionHeader('대상 병원 정보'),
-    new Paragraph({ spacing:{after:80}, children:[] }),
-    infoTable([
-      infoRow('대상병원명', fmt(d.hospital), '원장님 성함', fmt(d.director)),
-      infoRow('병원 연락처', fmt(d.hospitalTel), '원장님 연락처', fmt(d.directorTel)),
-    ]),
-    new Paragraph({
-      spacing: { before:100, after:240 },
-      children: [
-        new TextRun({ text: '주소: ', bold: true, size: 20, font: 'Malgun Gothic' }),
-        new TextRun({ text: fmt(d.address), size: 20, font: 'Malgun Gothic' }),
-      ]
-    }),
-
-    sectionHeader('신청 장비'),
-    new Paragraph({ spacing:{after:80}, children:[] }),
-    new Table({
-      width: { size: CW, type: WidthType.DXA },
-      columnWidths: [Math.floor(CW*0.05), Math.floor(CW*0.28), Math.floor(CW*0.28), Math.floor(CW*0.39)],
-      rows: [equipmentHeaderRow(), ...equipmentRows()]
-    }),
-
-    new Paragraph({ spacing:{before:240,after:80}, children:[] }),
-    sectionHeader('장비 사용기간'),
-    new Paragraph({
-      spacing: { before:100, after:240 },
-      children: [
-        new TextRun({ text: `${fmt(d.useStart)}  ~  ${fmt(d.useEnd)}`, size: 22, font: 'Malgun Gothic' }),
-      ]
-    }),
-
-    sectionHeader('기대효과 및 요청사항'),
-    new Paragraph({
-      spacing: { before:100 },
-      children: [
-        new TextRun({ text: '기대효과: ', bold: true, size: 20, font: 'Malgun Gothic' }),
-        new TextRun({ text: fmt(d.effect), size: 20, font: 'Malgun Gothic' }),
-      ]
-    }),
-    new Paragraph({
-      spacing: { before:80, after:240 },
-      children: [
-        new TextRun({ text: '요청사항: ', bold: true, size: 20, font: 'Malgun Gothic' }),
-        new TextRun({ text: fmt(d.request), size: 20, font: 'Malgun Gothic' }),
-      ]
-    }),
-
-    // Notice
-    new Paragraph({
-      border: { left: { style: BorderStyle.SINGLE, size: 12, color: '1a1a2e', space: 10 } },
-      indent: { left: 180 },
-      spacing: { before: 0, after: 60 },
-      children: [new TextRun({ text: 'DEMO는 장비의 임상결과를 확인하는 방법으로, 이로 인해 병원의 수익을 얻을 수 없습니다.', size: 18, color: '555555', font: 'Malgun Gothic' })]
-    }),
-    new Paragraph({
-      border: { left: { style: BorderStyle.SINGLE, size: 12, color: '1a1a2e', space: 10 } },
-      indent: { left: 180 },
-      spacing: { before: 0, after: 60 },
-      children: [new TextRun({ text: '출고 장비 및 구성품에 대해서는 담당자에게 그 책임이 있으며 분실 시 비용 청구를 진행할 수 있습니다.', size: 18, color: '555555', font: 'Malgun Gothic' })]
-    }),
-    new Paragraph({
-      border: { left: { style: BorderStyle.SINGLE, size: 12, color: '1a1a2e', space: 10 } },
-      indent: { left: 180 },
-      spacing: { before: 0, after: 300 },
-      children: [new TextRun({ text: '장비 및 구성품의 분실이 3회 이상 될 경우, 해당 담당자는 DEMO 진행이 불가하게 됩니다.', size: 18, color: '555555', font: 'Malgun Gothic' })]
-    }),
-
-    sectionHeader('부서장 승인'),
-    new Paragraph({ spacing:{before:80, after:0}, children:[] }),
-    infoTable([infoRow('부서장 이름', fmt(d.managerName), '승인일자', fmt(d.approvalDate))]),
-    new Paragraph({ spacing:{before:160, after:0}, children:[] }),
-    sigTable(['부서장 서명', d.managerName], ['신청자 서명', d.applicant]),
-  ];
-
-  // ══════════════════════════════════════════
-  //  PAGE 2: 장비 사용 합의서
-  // ══════════════════════════════════════════
-  const contractText = [
-    ['1. 장비의 대여 및 소유권', 'Candela는 부록A에 열거된 장비("본건 장비")를 고객이 상기 주소에서 종료일까지 사용할 수 있도록 대여하고자 한다. 고객은 Candela가 본건 장비에 대한 모든 권리, 소유권 및 지분을 항시 보유하며 본건 장비의 독점적 소유자라는 데에 동의한다. 고객은 본건 장비에 부착된 Candela의 명의 또는 소유권 표시를 제거하거나 숨기거나 달리 방해하지 않기로 한다.'],
-    ['2. 의무', '고객은 Candela가 허용한 서비스 공급자 외 그 어떠한 자도 본건 장비에 대해 서비스를 제공하도록 허용할 수 없다. 고객은 본건 장비를 상기 장비 위치에서만 사용 및 보관하고, Candela의 사양 및 권고에 따라 본건 장비를 양호한 작동 상태로 운영 및 유지하는 데에 동의한다.'],
-    ['3. 본건 장비의 반환', '본건 장비는 그 사용 기간 종료 시 양호한 작동 상태 및 조건으로 전체 반환되는 것을 조건으로 수수료 없이 고객에게 제공된다. 고객은 고객이 본건 장비를 보유하는 기간 중 본건 장비의 망실 또는 손상이 발생할 경우, 본건 장비의 교체 또는 수리로 인한 손실, 손해 및/또는 파손에 대하여 전적인 책임을 부담하는 데에 동의한다.'],
-    ['4. 임상결과에 대한 책임', '고객은 Candela가 고객의 환자를 위한 의료 시술 및 장비의 선정 또는 치료와 관련하여 고객에게 진료 또는 기타 의료 지원을 제공하는 것이 아님을 이해하고 이에 동의한다.'],
-    ['5. 의료기기 규제에 관한 책임', '고객은 한국의료기기산업협회(KMDIA)의 의료기기 거래에 대한 공정경쟁규약 및 세부운용기준 규정을 준수하며, 본건 장비를 평가목적으로만 사용하도록 한다.'],
-    ['6. 책임의 제한', '어떠한 경우에도 각 당사자는 본 계약, 본건 장비의 사용 또는 사용 불능과 관련된 간접적, 특별, 부수적, 결과적 또는 발생 가능한 손해에 대한 책임을 지지 않는다.'],
-    ['7. 품질 보증', '본 계약에 따라 공급되는 본건 장비는 어떠한 명시적이거나 묵시적이거나 법적인 보장 또는 진술도 없이 "현재 상태로" 제공된다.'],
-    ['8. 준거법 및 완전한 합의', '본 계약 및 본 계약의 운영 또는 체결과 관련하여 발생하는 일체의 분쟁은 대한민국 법에 따라 해석 및 규율된다.'],
-    ['9. 해지', '당사자 일방은 상대방 당사자에게 서면을 통한 사전통지를 제공함으로써 본 계약을 해지할 수 있다.'],
-    ['10. 부본', '본 계약은 복수의 부본으로 체결될 수 있으며 그러한 각 부본은 원본으로 간주된다.'],
-  ];
-
-  const page2 = [
-    new Paragraph({ children: [new TextRun({ text: '', break: 1 })] }),
-    new Paragraph({
-      alignment: AlignmentType.CENTER,
-      spacing: { before: 0, after: 200 },
-      children: [new TextRun({ text: '장비 사용 합의서', bold: true, size: 32, font: 'Malgun Gothic' })]
-    }),
-    new Paragraph({
-      spacing: { after: 120 },
-      children: [new TextRun({
-        text: '본 장비사용계약("본 계약")은 서울시 서초구 강남대로 327, 대륭서초타워 3층에 주소를 둔 시너론켄델라코리아 유한회사("Candela")와',
-        size: 20, font: 'Malgun Gothic'
+    // ── 부서장 승인 ───────────────────────────────────────────────────────
+    const approvalHeaderRow = new TableRow({
+      height: { value: 380, rule: 'atLeast' },
+      children: [new TableCell({
+        columnSpan: 4,
+        width: { size: CW, type: WidthType.DXA },
+        borders: allBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({
+          children: [new TextRun({ text: '[부서장 승인]', bold: true, size: SZ_BODY, font: KR })]
+        })]
       })]
-    }),
-    infoTable([
-      infoRow('병원명', fmt(d.hospital), '성명', fmt(d.director)),
-      infoRow('주소', fmt(d.address), '', ''),
-    ]),
-    new Paragraph({
-      spacing: { before: 120, after: 200 },
-      children: [new TextRun({ text: `에 주소를 둔 ("고객") 사이에 ${fmt(d.useStart)} 자로 체결되며, 사용기일은 ${fmt(d.useStart)} 부터 ${fmt(d.useEnd)} 로 한다.`, size: 20, font: 'Malgun Gothic' })]
-    }),
-    sectionHeader('대여 장비'),
-    new Paragraph({ spacing:{after:80}, children:[] }),
-    new Table({
-      width: { size: CW, type: WidthType.DXA },
-      columnWidths: [Math.floor(CW*0.05), Math.floor(CW*0.28), Math.floor(CW*0.28), Math.floor(CW*0.39)],
-      rows: [equipmentHeaderRow(), ...equipmentRows()]
-    }),
-    new Paragraph({ spacing:{before:200, after:0}, children:[] }),
-    ...contractText.flatMap(([title, body]) => [
-      new Paragraph({
-        spacing: { before: 160, after: 60 },
-        children: [new TextRun({ text: title, bold: true, size: 20, font: 'Malgun Gothic' })]
-      }),
-      new Paragraph({
-        spacing: { after: 0 },
-        indent: { left: 300 },
-        children: [new TextRun({ text: body, size: 20, font: 'Malgun Gothic' })]
-      }),
-    ]),
-    new Paragraph({ spacing:{before:400, after:80}, children:[], border:{ top:{style:BorderStyle.SINGLE, size:4, color:'CCCCCC'} } }),
-    new Paragraph({
-      spacing: { before: 200, after: 0 },
-      children: [new TextRun({ text: '본 계약의 체결을 증명하기 위하여 계약서 2통을 작성하여 고객과 시너론켄델라코리아가 기명날인 후 각 1통씩 보관한다.', size: 18, color: '666666', font: 'Malgun Gothic' })]
-    }),
-    new Paragraph({ spacing:{before:300, after:0}, children:[] }),
-    // Sig block - hospital side
-    new Paragraph({ children:[new TextRun({text:`병 원 명: ${fmt(d.hospital)}`, size:20, font:'Malgun Gothic'})] }),
-    new Paragraph({ children:[new TextRun({text:`주     소: ${fmt(d.address)}`, size:20, font:'Malgun Gothic'})] }),
-    new Paragraph({ spacing:{after:200}, children:[new TextRun({text:`성     명: ${fmt(d.director)}                (인)`, size:20, font:'Malgun Gothic'})] }),
-    // Sig block - company side
-    new Paragraph({ children:[new TextRun({text:'회 사 명: 시너론켄델라코리아 유한회사', size:20, font:'Malgun Gothic'})] }),
-    new Paragraph({ children:[new TextRun({text:'주     소: 서울시 서초구 강남대로 327 대륭서초타워 3층', size:20, font:'Malgun Gothic'})] }),
-    new Paragraph({ children:[new TextRun({text:`성     명: ${fmt(d.applicant)}                (인)`, size:20, font:'Malgun Gothic'})] }),
-  ];
+    });
 
-  // ── Build Document ──
-  const doc = new Document({
-    sections: [
-      {
+    const approvalRow = new TableRow({
+      height: { value: 380, rule: 'atLeast' },
+      children: [
+        labelCell('부서장 이름', cA),
+        valueCell(fmt(d.managerName), cB),
+        labelCell('승인일자', cC),
+        valueCell(fmt(d.approvalDate), cD),
+      ]
+    });
+
+    // 서명란 row
+    const sigRow = new TableRow({
+      height: { value: 700, rule: 'atLeast' },
+      children: [
+        emptyCell(cA),
+        emptyCell(cB),
+        labelCell('(인)', cC, { center: true }),
+        emptyCell(cD),
+      ]
+    });
+
+    // ── 장비 배정 section ──────────────────────────────────────────────────
+    const assignHeaderRow = new TableRow({
+      height: { value: 380, rule: 'atLeast' },
+      children: [new TableCell({
+        columnSpan: 4,
+        width: { size: CW, type: WidthType.DXA },
+        borders: allBorders,
+        verticalAlign: VerticalAlign.CENTER,
+        margins: { top: 60, bottom: 60, left: 120, right: 120 },
+        children: [new Paragraph({
+          children: [new TextRun({ text: '[장비 배정]', bold: true, size: SZ_BODY, font: KR })]
+        })]
+      })]
+    });
+
+    const eqs = d.equipments;
+    const firstEq = eqs[0] || {};
+    const assignItemRow = dataRow4('품목', fmt(firstEq.system), '', '');
+    const assignPeriodRow = dataRow4('출고일시', fmt(d.useStart), '회수일시', fmt(d.useEnd));
+    const assignConfirmRow = dataRow4('출고확인', '', '회수확인', '');
+
+    // ── Build all equipment rows ───────────────────────────────────────────
+    const allEqRows = d.equipments.flatMap(eq => equipmentRows(eq));
+
+    // ── Assemble main table ────────────────────────────────────────────────
+    const mainTable = new Table({
+      width: { size: CW, type: WidthType.DXA },
+      columnWidths: [cA, cB, cC, cD],
+      rows: [
+        titleRow,
+        subtitleRow,
+        // 신청 정보
+        dataRow4('신청일자', fmt(d.applyDate), '신청목적', fmt(d.applyPurpose)),
+        dataRow4('신청부서', fmt(d.dept), '신청자', fmt(d.applicant)),
+        // 병원 정보
+        dataRow4('대상병원명', fmt(d.hospital), '원장님 성함', fmt(d.director)),
+        dataRowFull('주소', fmt(d.address)),
+        dataRow4('병원 연락처', fmt(d.hospitalTel), '원장님 연락처', fmt(d.directorTel)),
+        // 장비
+        ...allEqRows,
+        // 사용기간
+        periodRow,
+        // 요청사항
+        requestHeaderRow,
+        effectRow,
+        ...(d.request ? [requestRow] : []),
+        // Notices
+        noticeRow('DEMO는 장비의 임상결과를 확인하는 방법으로, 이로 인해 병원의 수익을 얻을 수 없습니다.'),
+        noticeRow('출고 장비 및 구성품에 대해서는 담당자에게 그 책임이 있으며 분실 시 비용 청구를 진행할 수 있습니다.'),
+        noticeRow('장비 및 구성품의 분실이 3회이상 될 경우, 해당 담당자는 DEMO진행이 불가하게 됩니다.'),
+        // 부서장 승인
+        approvalHeaderRow,
+        approvalRow,
+        sigRow,
+        // 장비 배정
+        assignHeaderRow,
+        assignItemRow,
+        assignPeriodRow,
+        assignConfirmRow,
+      ]
+    });
+
+    // ── Document ──────────────────────────────────────────────────────────
+    const doc = new Document({
+      sections: [{
         properties: {
           page: {
-            size: { width: W, height: 16838 },
-            margin: { top: M, right: M, bottom: M, left: M }
+            size: { width: PAGE_W, height: 16838 },
+            margin: { top: MARGIN, right: MARGIN, bottom: MARGIN, left: MARGIN }
           }
         },
-        children: [...page1, new Paragraph({ children: [new TextRun({ break: 1 })] }), ...page2]
-      }
-    ]
-  });
+        children: [mainTable]
+      }]
+    });
 
-  const buffer = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(buffer);
-  const a = document.createElement('a');
-  a.href = url;
-  const hosp = d.hospital || '병원명';
-  const dt = d.applyDate || new Date().toISOString().slice(0,10);
-  a.download = `켄델라_데모신청서_${hosp}_${dt}.docx`;
-  a.click();
-  URL.revokeObjectURL(url);
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const hosp = d.hospital || '병원명';
+    const dt = d.applyDate || new Date().toISOString().slice(0,10);
+    a.download = `켄델라_데모신청서_${hosp}_${dt}.docx`;
+    a.click();
+    URL.revokeObjectURL(url);
+
   } catch(err) {
-    alert('Word 파일 생성 중 오류가 발생했습니다:\n' + err.message);
+    alert('Word 파일 생성 중 오류:\\n' + err.message);
     console.error(err);
   }
 }
