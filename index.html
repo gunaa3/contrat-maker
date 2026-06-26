@@ -7,12 +7,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --bg: #f5f6fa;
-      --surface: #ffffff;
+      --surface: #fff;
       --surface2: #f0f2f8;
       --border: #e4e7f0;
       --border-strong: #c8cde0;
@@ -28,459 +27,263 @@
       --warning-bg: #fffbeb;
       --danger: #dc2626;
       --danger-bg: #fef2f2;
-      --font: 'Inter', 'Apple SD Gothic Neo', system-ui, sans-serif;
-      --mono: 'JetBrains Mono', 'Courier New', monospace;
-      --radius: 12px;
-      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      /* 엑셀 색상 그대로 */
+      --excel-header-bg: #1F4E78;
+      --excel-col-bg: #F2F2F2;
+      --excel-sum-bg: #FCE4D6;
+      --excel-stock-bg: #E2EFDA;
+      --font: 'Inter','Apple SD Gothic Neo',system-ui,sans-serif;
+      --mono: 'JetBrains Mono','Courier New',monospace;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,.08);
     }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; }
 
-    body {
-      font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    /* Header */
+    /* ── Header ── */
     .header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 32px;
-      height: 60px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: var(--shadow);
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 28px; height:56px;
+      background:var(--surface); border-bottom:1px solid var(--border);
+      position:sticky; top:0; z-index:100; box-shadow:var(--shadow);
     }
-    .logo {
-      font-size: 15px;
-      font-weight: 600;
-      color: var(--text);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      letter-spacing: -0.01em;
-    }
-    .logo-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-    }
-
-    /* Nav */
-    .nav { display: flex; gap: 2px; align-items: center; }
+    .logo { font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px; letter-spacing:-.01em; }
+    .logo-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); }
+    .nav { display:flex; gap:2px; align-items:center; }
     .nav-btn {
-      padding: 7px 14px;
-      border-radius: 8px;
-      border: none;
-      background: none;
-      color: var(--text-muted);
-      font-size: 13px;
-      font-family: var(--font);
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
+      padding:6px 13px; border-radius:7px; border:none; background:none;
+      color:var(--text-muted); font-size:13px; font-family:var(--font);
+      font-weight:500; cursor:pointer; transition:all .15s;
     }
-    .nav-btn:hover { background: var(--surface2); color: var(--text); }
-    .nav-btn.active { background: var(--accent-soft); color: var(--accent); }
-
-    /* Main */
-    .main { padding: 28px 32px; max-width: 1100px; margin: 0 auto; }
-
-    /* Panels */
-    .panel { display: none; }
-    .panel.active { display: block; }
-
-    /* Metrics */
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 24px;
+    .nav-btn:hover { background:var(--surface2); color:var(--text); }
+    .nav-btn.active { background:var(--accent-soft); color:var(--accent); }
+    .btn-export {
+      padding:6px 13px; border-radius:7px; font-size:12px; font-family:var(--font);
+      font-weight:600; cursor:pointer; transition:all .15s;
+      background:var(--success-bg); color:var(--success);
+      border:1px solid #a7f3d0; margin-left:10px;
     }
-    .metric {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-      box-shadow: var(--shadow);
-    }
-    .metric-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      margin-bottom: 10px;
-      font-weight: 500;
-    }
-    .metric-value { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
-    .metric-value.accent { color: var(--accent); }
-    .metric-value.success { color: var(--success); }
-    .metric-value.warning { color: var(--warning); }
-    .metric-value.danger { color: var(--danger); }
+    .btn-export:hover { background:#d1fae5; }
 
-    /* Cards */
+    /* ── Main ── */
+    .main { padding:24px 28px; max-width:1300px; margin:0 auto; }
+    .panel { display:none; } .panel.active { display:block; }
+
+    /* ── 엑셀 스타일 테이블 ── */
+    .excel-wrap { overflow-x:auto; margin-bottom:20px; border-radius:var(--radius); box-shadow:var(--shadow-md); }
+    .excel-table { border-collapse:collapse; font-size:12px; font-family:var(--font); min-width:100%; }
+    .excel-table td, .excel-table th { border:1px solid #bfbfbf; padding:0; white-space:nowrap; }
+
+    /* 그룹 헤더 행 (4행) */
+    .row-group th {
+      background:var(--excel-header-bg); color:#fff;
+      font-weight:700; font-size:11px;
+      text-align:center; padding:6px 10px;
+      vertical-align:middle;
+    }
+    /* 컬럼명 행 (5행) */
+    .row-col th {
+      background:var(--excel-col-bg); color:var(--text);
+      font-weight:700; font-size:11px;
+      text-align:center; padding:6px 8px;
+      vertical-align:middle; line-height:1.3;
+    }
+    /* 데이터 행 */
+    .row-data td { padding:5px 8px; vertical-align:middle; font-size:12px; }
+    .row-data td.center { text-align:center; }
+    .row-data td.right { text-align:right; }
+    .row-data td.sum { background:var(--excel-sum-bg); font-weight:700; text-align:right; }
+    .row-data td.stock { background:var(--excel-stock-bg); font-weight:700; text-align:right; }
+    .row-data td.lot-id { font-family:var(--mono); font-size:11px; text-align:center; }
+    .row-data td.empty { color:#aaa; text-align:center; }
+    .row-data:hover td { background-color:rgba(67,97,238,.04) !important; }
+
+    /* ── 입고 시트 테이블 ── */
+    .inbound-table { border-collapse:collapse; font-size:12px; min-width:100%; }
+    .inbound-table th { background:#fff; font-weight:700; font-size:11px; text-align:center; padding:6px 8px; border:1px solid #bfbfbf; }
+    .inbound-table td { padding:5px 8px; border:1px solid #bfbfbf; font-size:12px; vertical-align:middle; }
+    .inbound-table tr:hover td { background:#fafbff; }
+
+    /* ── 폼 ── */
     .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      margin-bottom: 16px;
-      overflow: hidden;
-      box-shadow: var(--shadow);
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); margin-bottom:16px;
+      overflow:hidden; box-shadow:var(--shadow);
     }
     .card-header {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.07em;
-      background: var(--surface);
+      padding:13px 18px; border-bottom:1px solid var(--border);
+      font-size:11px; font-weight:700; color:var(--text-muted);
+      text-transform:uppercase; letter-spacing:.07em;
+      display:flex; justify-content:space-between; align-items:center;
     }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:18px; }
+    .form-full { grid-column:1/-1; }
+    .form-group label { display:block; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:5px; font-weight:600; }
+    input,select { width:100%; padding:8px 11px; background:var(--surface); border:1px solid var(--border-strong); border-radius:7px; color:var(--text); font-size:13px; font-family:var(--font); transition:border-color .15s,box-shadow .15s; }
+    input:focus,select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(67,97,238,.1); }
+    .form-actions { padding:0 18px 18px; }
+    .btn { padding:8px 16px; border-radius:7px; font-size:13px; font-family:var(--font); cursor:pointer; font-weight:500; transition:all .15s; border:none; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { background:var(--accent-dim); }
+    .btn-ghost { background:var(--surface); color:var(--text-muted); border:1px solid var(--border-strong); }
+    .btn-ghost:hover { color:var(--text); background:var(--surface2); }
 
-    /* Table */
-    table { width: 100%; border-collapse: collapse; }
-    th {
-      text-align: left;
-      padding: 10px 16px;
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      border-bottom: 1px solid var(--border);
-      font-weight: 600;
-      background: var(--surface2);
-    }
-    td {
-      padding: 12px 16px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
-    }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #fafbff; }
-    .lot-code { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 500; }
+    /* ── 필터 ── */
+    .filter-bar { display:flex; gap:10px; margin-bottom:14px; align-items:flex-end; flex-wrap:wrap; }
+    .filter-bar > div { display:flex; flex-direction:column; gap:4px; }
+    .filter-bar select,.filter-bar input { width:auto; min-width:120px; }
+    .filter-bar label { font-size:11px; color:var(--text-muted); font-weight:600; text-transform:uppercase; letter-spacing:.06em; }
 
-    /* Badge */
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .badge-ok { background: var(--success-bg); color: var(--success); }
-    .badge-low { background: var(--warning-bg); color: var(--warning); }
-    .badge-out { background: var(--danger-bg); color: var(--danger); }
+    /* ── 섹션 제목 ── */
+    .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .section-title { font-size:14px; font-weight:700; letter-spacing:-.01em; }
+    .section-sub { font-size:12px; color:var(--text-muted); margin-top:2px; }
 
-    /* Form */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      padding: 22px;
-    }
-    .form-full { grid-column: 1 / -1; }
-    .form-group label {
-      display: block;
-      font-size: 11px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-    input, select, textarea {
-      width: 100%;
-      padding: 9px 12px;
-      background: var(--surface);
-      border: 1px solid var(--border-strong);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: var(--font);
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(67,97,238,0.1);
-    }
-
-    /* Buttons */
-    .form-actions { padding: 0 22px 22px; }
-    .btn {
-      padding: 9px 18px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-family: var(--font);
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.15s;
-      border: none;
-    }
-    .btn-primary { background: var(--accent); color: #fff; box-shadow: 0 1px 3px rgba(67,97,238,0.3); }
-    .btn-primary:hover { background: var(--accent-dim); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(67,97,238,0.3); }
-    .btn-ghost { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-strong); }
-    .btn-ghost:hover { color: var(--text); background: var(--surface2); }
-    .btn-export { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; font-weight: 600; }
-    .btn-export:hover { background: #d1fae5; }
-
-    /* Filter */
-    .filter-bar {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 16px;
-      align-items: flex-end;
-      flex-wrap: wrap;
-    }
-    .filter-bar > div { display: flex; flex-direction: column; gap: 4px; }
-    .filter-bar select, .filter-bar input { width: auto; min-width: 130px; }
-    .filter-bar label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
-
-    /* Section header */
-    .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .section-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
-
-    /* Toast */
+    /* ── Toast ── */
     .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 13px 18px;
-      font-size: 13px;
-      font-weight: 500;
-      z-index: 999;
-      display: none;
-      gap: 8px;
-      align-items: center;
-      box-shadow: var(--shadow-md);
+      position:fixed; bottom:22px; right:22px;
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:12px 16px; font-size:13px; font-weight:500;
+      z-index:999; display:none; gap:8px; align-items:center; box-shadow:var(--shadow-md);
     }
-    .toast.show { display: flex; }
-    .toast.success { border-left: 3px solid var(--success); color: var(--success); }
-    .toast.error { border-left: 3px solid var(--danger); color: var(--danger); }
+    .toast.show { display:flex; }
+    .toast.success { border-left:3px solid var(--success); color:var(--success); }
+    .toast.error { border-left:3px solid var(--danger); color:var(--danger); }
+    .loading,.empty { text-align:center; padding:40px; color:var(--text-light); font-size:13px; }
 
-    /* Loading / Empty */
-    .loading, .empty {
-      text-align: center;
-      padding: 48px;
-      color: var(--text-light);
-      font-size: 13px;
-    }
+    /* ── 메트릭 카드 ── */
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+    .metric { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow); }
+    .metric-label { font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:8px; font-weight:500; }
+    .metric-value { font-size:26px; font-weight:700; letter-spacing:-.02em; }
+    .metric-value.accent { color:var(--accent); }
+    .metric-value.success { color:var(--success); }
 
-    .vendor-section { margin-top: 16px; }
+    /* ── 재고현황 테이블 ── */
+    .dash-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .dash-table th { text-align:left; padding:10px 14px; font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; border-bottom:1px solid var(--border); font-weight:600; background:var(--surface2); }
+    .dash-table td { padding:11px 14px; border-bottom:1px solid var(--border); }
+    .dash-table tr:last-child td { border-bottom:none; }
+    .dash-table tr:hover td { background:#fafbff; }
+    .badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+    .badge-ok { background:var(--success-bg); color:var(--success); }
+    .badge-low { background:var(--warning-bg); color:var(--warning); }
+    .badge-out { background:var(--danger-bg); color:var(--danger); }
+    @media(max-width:700px){ .metrics{grid-template-columns:1fr 1fr;} }
 
-    @media (max-width: 700px) {
-      .header { padding: 0 16px; }
-      .main { padding: 16px; }
-      .metrics { grid-template-columns: 1fr 1fr; }
-      .form-grid { grid-template-columns: 1fr; }
-      .filter-bar { flex-direction: column; align-items: flex-start; }
+    @media(max-width:700px){
+      .header{padding:0 14px;} .main{padding:14px;}
+      .form-grid{grid-template-columns:1fr;} .filter-bar{flex-direction:column;}
     }
   </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="logo">
-    <div class="logo-dot"></div>
-    재고 관리
-  </div>
+  <div class="logo"><div class="logo-dot"></div>재고 관리</div>
   <nav class="nav">
-    <button class="nav-btn active" onclick="showPanel('dashboard')">재고 현황</button>
-    <button class="nav-btn" onclick="showPanel('inbound')">입고 등록</button>
-    <button class="nav-btn" onclick="showPanel('outbound')">출고 등록</button>
-    <button class="nav-btn" onclick="showPanel('history')">출고 이력</button>
-    <button class="btn btn-export" style="margin-left:12px;font-size:12px;padding:7px 14px;" onclick="exportAll()">↓ 엑셀 전체 다운로드</button>
+    <button class="nav-btn active" onclick="showPanel('inbound',this)">입고 등록</button>
+    <button class="nav-btn" onclick="showPanel('outbound',this)">출고 등록</button>
+    <button class="nav-btn" onclick="showPanel('history',this)">출고 이력</button>
+    <button class="nav-btn" onclick="showPanel('dashboard',this)">재고 현황</button>
+    <button class="nav-btn" onclick="showPanel('excelview',this)">엑셀 뷰</button>
+    <button class="btn-export" onclick="exportAll()">↓ 엑셀 다운로드</button>
   </nav>
 </header>
 
 <main class="main">
 
-  <!-- 재고 현황 -->
-  <div id="panel-dashboard" class="panel active">
+  <!-- ── 재고 현황 (카드 스타일) ── -->
+  <div id="panel-dashboard" class="panel">
     <div class="metrics">
-      <div class="metric">
-        <div class="metric-label">총 Lot 수</div>
-        <div class="metric-value accent" id="m-lots">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">총 입고</div>
-        <div class="metric-value" id="m-total-in">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">총 출고</div>
-        <div class="metric-value" id="m-total-out">—</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">현재 재고</div>
-        <div class="metric-value success" id="m-stock">—</div>
-      </div>
+      <div class="metric"><div class="metric-label">총 Lot 수</div><div class="metric-value accent" id="m-lots">—</div></div>
+      <div class="metric"><div class="metric-label">총 입고</div><div class="metric-value" id="m-total-in">—</div></div>
+      <div class="metric"><div class="metric-label">총 출고</div><div class="metric-value" id="m-total-out">—</div></div>
+      <div class="metric"><div class="metric-label">현재 재고</div><div class="metric-value success" id="m-stock">—</div></div>
     </div>
-
     <div class="card">
-      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Lot별 재고 현황</span>
-        <button class="btn btn-export" style="font-size:12px;padding:6px 12px;" onclick="exportLotStock()">↓ 엑셀 다운로드</button>
-      </div>
+      <div class="card-header">Lot별 재고 현황</div>
       <div id="lot-table-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
-
-    <div class="card vendor-section">
-      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>업체별 출고 현황</span>
-        <button class="btn btn-export" style="font-size:12px;padding:6px 12px;" onclick="exportVendorStock()">↓ 엑셀 다운로드</button>
-      </div>
+    <div class="card">
+      <div class="card-header">업체별 출고 현황</div>
       <div id="vendor-table-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
   </div>
 
-  <!-- 입고 등록 -->
-  <div id="panel-inbound" class="panel">
+  <!-- ── 엑셀 뷰 ── -->
+  <div id="panel-excelview" class="panel">
     <div class="section-header">
-      <div class="section-title">입고 등록</div>
+      <div>
+        <div class="section-title">출고 현황 (엑셀 뷰)</div>
+        <div class="section-sub">Lot별 입출고 및 일자별 출고 상세</div>
+      </div>
     </div>
-    <div class="card">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Lot 번호 (Batch No.)</label>
-          <input type="text" id="in-lot" placeholder="예: BP9A0920A0">
-        </div>
-        <div class="form-group">
-          <label>수입일자</label>
-          <input type="date" id="in-date">
-        </div>
-        <div class="form-group">
-          <label>생산일자</label>
-          <input type="date" id="in-prod-date">
-        </div>
-        <div class="form-group">
-          <label>수입 수량 (대)</label>
-          <input type="number" id="in-qty" placeholder="0" min="0">
-        </div>
-        <div class="form-group">
-          <label>Grade / Status</label>
-          <input type="text" id="in-grade" placeholder="예: DVSTS029">
-        </div>
-        <div class="form-group">
-          <label>Packaging</label>
-          <select id="in-pack">
-            <option value="">선택</option>
-            <option>Pail</option>
-            <option>Drum</option>
-            <option>Box</option>
-            <option>기타</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>운송 방법</label>
-          <select id="in-ship">
-            <option value="">선택</option>
-            <option>해상</option>
-            <option>항공</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>창고</label>
-          <input type="text" id="in-warehouse" placeholder="예: 용인">
-        </div>
-        <div class="form-group form-full">
-          <label>비고</label>
-          <input type="text" id="in-note" placeholder="메모 (선택)">
-        </div>
+    <div class="excel-wrap">
+      <div id="dashboard-table"><div class="loading">불러오는 중...</div></div>
+    </div>
+    <div class="section-header" style="margin-top:8px">
+      <div>
+        <div class="section-title">수입 입고 현황</div>
+        <div class="section-sub">입고 이력 전체</div>
       </div>
-      <div class="form-actions">
-        <button class="btn btn-primary" onclick="submitInbound()">입고 등록</button>
-      </div>
+    </div>
+    <div class="excel-wrap">
+      <div id="inbound-table"><div class="loading">불러오는 중...</div></div>
     </div>
   </div>
 
-  <!-- 출고 등록 -->
+  <!-- ── 입고 등록 ── -->
+  <div id="panel-inbound" class="panel active">
+    <div class="section-header"><div class="section-title">입고 등록</div></div>
+    <div class="card">
+      <div class="card-header">입고 정보</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Lot 번호 (Batch No.)</label><input type="text" id="in-lot" placeholder="예: BP9A0920A0"></div>
+        <div class="form-group"><label>수입일자</label><input type="date" id="in-date"></div>
+        <div class="form-group"><label>생산일자</label><input type="date" id="in-prod-date"></div>
+        <div class="form-group"><label>수입 수량 (EA)</label><input type="number" id="in-qty" placeholder="0" min="0"></div>
+        <div class="form-group"><label>생산 수량</label><input type="number" id="in-prod-qty" placeholder="0" min="0"></div>
+        <div class="form-group"><label>Grade / Status</label><input type="text" id="in-grade" placeholder="예: DVSTS029"></div>
+        <div class="form-group"><label>Packaging</label><select id="in-pack"><option value="">선택</option><option>Pail</option><option>Drum</option><option>Box</option><option>기타</option></select></div>
+        <div class="form-group"><label>운송 방법</label><select id="in-ship"><option value="">선택</option><option>해상</option><option>항공</option></select></div>
+        <div class="form-group"><label>창고</label><input type="text" id="in-warehouse" placeholder="예: 용인"></div>
+        <div class="form-group"><label>Customer</label><input type="text" id="in-customer" placeholder="업체명"></div>
+        <div class="form-group form-full"><label>비고</label><input type="text" id="in-note" placeholder="메모 (선택)"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitInbound()">입고 등록</button></div>
+    </div>
+  </div>
+
+  <!-- ── 출고 등록 ── -->
   <div id="panel-outbound" class="panel">
-    <div class="section-header">
-      <div class="section-title">출고 등록</div>
-    </div>
+    <div class="section-header"><div class="section-title">출고 등록</div></div>
     <div class="card">
+      <div class="card-header">출고 정보</div>
       <div class="form-grid">
-        <div class="form-group">
-          <label>출고일자</label>
-          <input type="date" id="out-date">
-        </div>
-        <div class="form-group">
-          <label>업체명</label>
-          <select id="out-vendor">
-            <option value="">선택 또는 직접 입력</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>업체명 직접 입력 (신규)</label>
-          <input type="text" id="out-vendor-new" placeholder="기존 업체 선택 시 비워두세요">
-        </div>
-        <div class="form-group">
-          <label>Lot 번호</label>
-          <select id="out-lot">
-            <option value="">선택</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>출고 수량 (대)</label>
-          <input type="number" id="out-qty" placeholder="0" min="1">
-        </div>
-        <div class="form-group form-full">
-          <label>비고</label>
-          <input type="text" id="out-note" placeholder="메모 (선택)">
-        </div>
+        <div class="form-group"><label>출고일자</label><input type="date" id="out-date"></div>
+        <div class="form-group"><label>업체명</label><select id="out-vendor"><option value="">선택</option></select></div>
+        <div class="form-group"><label>업체명 직접 입력 (신규)</label><input type="text" id="out-vendor-new" placeholder="기존 선택 시 비워두세요"></div>
+        <div class="form-group"><label>Lot 번호</label><select id="out-lot"><option value="">선택</option></select></div>
+        <div class="form-group"><label>출고 수량 (EA)</label><input type="number" id="out-qty" placeholder="0" min="1"></div>
+        <div class="form-group form-full"><label>비고</label><input type="text" id="out-note" placeholder="메모 (선택)"></div>
       </div>
-      <div class="form-actions">
-        <button class="btn btn-primary" onclick="submitOutbound()">출고 등록</button>
-      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitOutbound()">출고 등록</button></div>
     </div>
   </div>
 
-  <!-- 출고 이력 -->
+  <!-- ── 출고 이력 ── -->
   <div id="panel-history" class="panel">
-    <div class="section-header">
-      <div class="section-title">출고 이력</div>
-    </div>
+    <div class="section-header"><div class="section-title">출고 이력</div></div>
     <div class="filter-bar">
-      <div>
-        <label>업체</label>
-        <select id="f-vendor" onchange="loadHistory()">
-          <option value="">전체</option>
-        </select>
-      </div>
-      <div>
-        <label>Lot</label>
-        <select id="f-lot" onchange="loadHistory()">
-          <option value="">전체</option>
-        </select>
-      </div>
-      <div>
-        <label>시작일</label>
-        <input type="date" id="f-from" onchange="loadHistory()">
-      </div>
-      <div>
-        <label>종료일</label>
-        <input type="date" id="f-to" onchange="loadHistory()">
-      </div>
+      <div><label>업체</label><select id="f-vendor" onchange="loadHistory()"><option value="">전체</option></select></div>
+      <div><label>Lot</label><select id="f-lot" onchange="loadHistory()"><option value="">전체</option></select></div>
+      <div><label>시작일</label><input type="date" id="f-from" onchange="loadHistory()"></div>
+      <div><label>종료일</label><input type="date" id="f-to" onchange="loadHistory()"></div>
       <button class="btn btn-ghost" onclick="clearFilters()">초기화</button>
-      <button class="btn btn-export" onclick="exportHistory()">↓ 엑셀 다운로드</button>
     </div>
-    <div class="card">
-      <div id="history-table-wrap"><div class="loading">불러오는 중...</div></div>
+    <div class="excel-wrap">
+      <div id="history-table"><div class="loading">불러오는 중...</div></div>
     </div>
   </div>
 
@@ -489,466 +292,375 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ─── Supabase 설정 ───────────────────────────────────────────
   const SUPABASE_URL = 'https://pvwwfkqclhljzzaqxamv.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2d3dma3FjbGhsanp6YXF4YW12Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NjYyMDMsImV4cCI6MjA5ODA0MjIwM30.xX7LbiYVNPTvJNbr6271Ay17Jldb3pUcfw8y0VKLxCw';
-  const { createClient } = supabase;
-  const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // ─── 패널 전환 ───────────────────────────────────────────────
-  function showPanel(name) {
-    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('panel-' + name).classList.add('active');
-    event.target.classList.add('active');
-    if (name === 'dashboard') loadDashboard();
-    if (name === 'outbound') loadOutboundDropdowns();
-    if (name === 'history') { loadHistoryFilters(); loadHistory(); }
-  }
-
-  // ─── 토스트 ──────────────────────────────────────────────────
-  function toast(msg, type = 'success') {
-    const t = document.getElementById('toast');
-    t.textContent = type === 'success' ? '✓ ' + msg : '✕ ' + msg;
-    t.className = 'toast show ' + type;
-    setTimeout(() => t.classList.remove('show'), 3000);
-  }
-
-  // ─── 날짜 기본값 ─────────────────────────────────────────────
   function today() { return new Date().toISOString().split('T')[0]; }
   document.getElementById('in-date').value = today();
   document.getElementById('out-date').value = today();
 
-  // ─── 대시보드 ────────────────────────────────────────────────
+  function toast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = (type==='success'?'✓ ':'✕ ') + msg;
+    t.className = 'toast show ' + type;
+    setTimeout(()=>t.classList.remove('show'), 3000);
+  }
+
+  function showPanel(name, btn) {
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('panel-'+name).classList.add('active');
+    if(btn) btn.classList.add('active');
+    if(name==='dashboard') loadOutboundDropdowns();
+    if(name==='excelview') loadExcelView();
+    if(name==='outbound') loadOutboundDropdowns();
+    if(name==='history') { loadHistoryFilters(); loadHistory(); }
+  }
+
+  // ── 대시보드: 카드 스타일 ──────────────────────────────────
   async function loadDashboard() {
     const [inRes, outRes] = await Promise.all([
       db.from('입고').select('*'),
       db.from('출고').select('*')
     ]);
-    const inData = inRes.data || [];
-    const outData = outRes.data || [];
+    const inData = inRes.data||[], outData = outRes.data||[];
 
-    // Lot별 집계
-    const lots = {};
+    const lotMap = {};
     inData.forEach(r => {
-      if (!lots[r.lot번호]) lots[r.lot번호] = { lot: r.lot번호, 날짜: r.날짜, in: 0, out: 0 };
-      lots[r.lot번호].in += r.수입수량 || 0;
+      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {lot번호:r.lot번호, 수입일:r.날짜, in:0, out:0};
+      lotMap[r.lot번호].in += r.수입수량||0;
     });
     outData.forEach(r => {
-      if (!lots[r.lot번호]) lots[r.lot번호] = { lot: r.lot번호, 날짜: '—', in: 0, out: 0 };
-      lots[r.lot번호].out += r.수량 || 0;
+      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {lot번호:r.lot번호, 수입일:'—', in:0, out:0};
+      lotMap[r.lot번호].out += r.수량||0;
     });
-
-    const lotList = Object.values(lots);
-    const totalIn = lotList.reduce((s, l) => s + l.in, 0);
-    const totalOut = lotList.reduce((s, l) => s + l.out, 0);
-    const totalStock = totalIn - totalOut;
-    const lowCount = lotList.filter(l => (l.in - l.out) < 50 && (l.in - l.out) > 0).length;
+    const lotList = Object.values(lotMap);
+    const totalIn = lotList.reduce((s,l)=>s+l.in,0);
+    const totalOut = lotList.reduce((s,l)=>s+l.out,0);
 
     document.getElementById('m-lots').textContent = lotList.length;
     document.getElementById('m-total-in').textContent = totalIn.toLocaleString();
     document.getElementById('m-total-out').textContent = totalOut.toLocaleString();
-    document.getElementById('m-stock').textContent = totalStock.toLocaleString();
+    document.getElementById('m-stock').textContent = (totalIn-totalOut).toLocaleString();
 
-    // Lot 테이블
-    if (lotList.length === 0) {
+    // Lot별 테이블
+    if(!lotList.length) {
       document.getElementById('lot-table-wrap').innerHTML = '<div class="empty">입고 데이터가 없습니다.</div>';
     } else {
-      document.getElementById('lot-table-wrap').innerHTML = `
-        <table>
-          <thead><tr>
-            <th>Lot 번호</th><th>수입일</th><th>총 입고</th><th>총 출고</th><th>현재고</th><th>상태</th>
-          </tr></thead>
-          <tbody>${lotList.sort((a,b) => b.날짜?.localeCompare(a.날짜)).map(l => {
-            const stock = l.in - l.out;
-            const badge = stock <= 0 ? '<span class="badge badge-out">소진</span>'
-                        : stock < 50 ? '<span class="badge badge-low">부족 주의</span>'
-                        : '<span class="badge badge-ok">정상</span>';
-            return `<tr>
-              <td class="lot-code">${l.lot}</td>
-              <td>${l.날짜 || '—'}</td>
-              <td>${l.in.toLocaleString()}</td>
-              <td>${l.out.toLocaleString()}</td>
-              <td><strong>${stock.toLocaleString()}</strong></td>
-              <td>${badge}</td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table>`;
+      document.getElementById('lot-table-wrap').innerHTML = `<table class="dash-table">
+        <thead><tr><th>Lot 번호</th><th>수입일</th><th>총 입고</th><th>총 출고</th><th>현재고</th><th>상태</th></tr></thead>
+        <tbody>${lotList.map(l=>{
+          const stock=l.in-l.out;
+          const badge = stock<=0?'<span class="badge badge-out">소진</span>':stock<50?'<span class="badge badge-low">부족 주의</span>':'<span class="badge badge-ok">정상</span>';
+          return `<tr><td style="font-family:var(--mono);font-size:12px;color:var(--accent)">${l.lot번호}</td><td>${l.수입일||'—'}</td><td>${l.in.toLocaleString()}</td><td>${l.out.toLocaleString()}</td><td><strong>${stock.toLocaleString()}</strong></td><td>${badge}</td></tr>`;
+        }).join('')}</tbody>
+      </table>`;
     }
 
-    // 업체별 집계
+    // 업체별 테이블
     const vendors = {};
-    const allLots = Object.keys(lots);
+    const allLots = Object.keys(lotMap);
     outData.forEach(r => {
-      if (!vendors[r.업체]) vendors[r.업체] = {};
-      vendors[r.업체][r.lot번호] = (vendors[r.업체][r.lot번호] || 0) + r.수량;
+      if(!vendors[r.업체]) vendors[r.업체]={};
+      vendors[r.업체][r.lot번호] = (vendors[r.업체][r.lot번호]||0)+r.수량;
     });
     const vendorList = Object.entries(vendors);
-
-    if (vendorList.length === 0) {
+    if(!vendorList.length) {
       document.getElementById('vendor-table-wrap').innerHTML = '<div class="empty">출고 데이터가 없습니다.</div>';
     } else {
-      document.getElementById('vendor-table-wrap').innerHTML = `
-        <table>
-          <thead><tr>
-            <th>업체</th>${allLots.map(l => `<th class="lot-code">${l}</th>`).join('')}<th>합계</th>
-          </tr></thead>
-          <tbody>${vendorList.map(([vendor, lotMap]) => {
-            const total = Object.values(lotMap).reduce((s,v)=>s+v,0);
-            return `<tr>
-              <td>${vendor}</td>
-              ${allLots.map(l => `<td>${(lotMap[l]||0).toLocaleString()}</td>`).join('')}
-              <td><strong>${total.toLocaleString()}</strong></td>
-            </tr>`;
-          }).join('')}</tbody>
-        </table>`;
+      document.getElementById('vendor-table-wrap').innerHTML = `<table class="dash-table">
+        <thead><tr><th>업체</th>${allLots.map(l=>`<th style="font-family:var(--mono);font-size:11px">${l}</th>`).join('')}<th>합계</th></tr></thead>
+        <tbody>${vendorList.map(([vendor,lm])=>{
+          const total=Object.values(lm).reduce((s,v)=>s+v,0);
+          return `<tr><td>${vendor}</td>${allLots.map(l=>`<td style="text-align:right">${(lm[l]||0).toLocaleString()}</td>`).join('')}<td><strong>${total.toLocaleString()}</strong></td></tr>`;
+        }).join('')}</tbody>
+      </table>`;
     }
   }
 
-  // ─── 입고 등록 ───────────────────────────────────────────────
+  // ── 엑셀 뷰 ────────────────────────────────────────────────
+  async function loadExcelView() {
+    const [inRes, outRes] = await Promise.all([
+      db.from('입고').select('*').order('날짜'),
+      db.from('출고').select('*').order('날짜')
+    ]);
+    const inData=inRes.data||[], outData=outRes.data||[];
+
+    const lotMap={};
+    inData.forEach(r=>{
+      if(!lotMap[r.lot번호]) lotMap[r.lot번호]={lot번호:r.lot번호,생산일자:r.생산일자||'-',수입일자:r.날짜||'-',생산수량:0,수입수량:0,비고:r.비고||''};
+      lotMap[r.lot번호].수입수량+=r.수입수량||0;
+      lotMap[r.lot번호].생산수량+=r.생산수량||0;
+    });
+    const rawDates=[...new Set(outData.map(r=>r.날짜))].sort();
+    const fmtDate=d=>{const[,m,day]=d.split('-');return`${m}/${day}`;};
+    const outByLotDate={};
+    outData.forEach(r=>{
+      if(!outByLotDate[r.lot번호]) outByLotDate[r.lot번호]={};
+      outByLotDate[r.lot번호][r.날짜]=(outByLotDate[r.lot번호][r.날짜]||0)+r.수량;
+    });
+    const lotList=Object.values(lotMap);
+    const dateCols=rawDates.length||1;
+
+    let html=`<table class="excel-table"><thead>
+      <tr class="row-group">
+        <th colspan="3">1. LOT 기준 정보</th>
+        <th colspan="2">2. 입고 정보 (자동반영)</th>
+        <th colspan="2">3. 재고 및 출고 지표 (자동반영)</th>
+        <th colspan="${dateCols}">4. 일자별 출고 상세 기록 (우측으로 날짜 확장 가능)</th>
+        <th></th>
+      </tr>
+      <tr class="row-col">
+        <th>Lot 번호</th><th>생산일자</th><th>수입일자</th>
+        <th>생산 수량</th><th>수입 수량</th>
+        <th>출고 합계<br>(자동)</th><th>창고 보관 수량<br>(현재고)</th>
+        ${rawDates.map(d=>`<th>${fmtDate(d)}</th>`).join('')}
+        <th>비고</th>
+      </tr></thead><tbody>`;
+
+    lotList.forEach(lot=>{
+      const od=outByLotDate[lot.lot번호]||{};
+      const totalOut=rawDates.reduce((s,d)=>s+(od[d]||0),0);
+      const stock=lot.수입수량-totalOut;
+      html+=`<tr class="row-data">
+        <td class="lot-id">${lot.lot번호}</td>
+        <td class="center">${lot.생산일자}</td><td class="center">${lot.수입일자}</td>
+        <td class="right">${lot.생산수량}</td><td class="right">${lot.수입수량}</td>
+        <td class="sum">${totalOut}</td><td class="stock">${stock}</td>
+        ${rawDates.map(d=>`<td class="right">${od[d]||0}</td>`).join('')}
+        <td>${lot.비고}</td></tr>`;
+    });
+    for(let i=0;i<Math.max(0,10-lotList.length);i++){
+      html+=`<tr class="row-data"><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td><td class="right">0</td><td class="right">0</td><td class="sum">0</td><td class="stock">0</td>${rawDates.map(()=>`<td class="right">0</td>`).join('')}<td></td></tr>`;
+    }
+    html+=`</tbody></table>`;
+    document.getElementById('dashboard-table').innerHTML=html;
+
+    let html2=`<table class="inbound-table"><thead><tr>
+      <th>Status</th><th>Grade</th><th>Order No.</th><th>Production Date</th>
+      <th>Import Date</th><th>입고일자</th><th>Packaging</th><th>Batch No.</th>
+      <th>EA</th><th>Quantity(KG)</th><th>Shipment</th><th>Quilt여부</th>
+      <th>Customer</th><th>Remarks</th><th>Warehouse</th><th>Comment</th>
+    </tr></thead><tbody>`;
+    if(!inData.length){html2+=`<tr><td colspan="16" class="empty">입고 데이터가 없습니다.</td></tr>`;}
+    else{inData.forEach((r,i)=>{html2+=`<tr><td>입고</td><td>${r.grade||''}</td><td></td><td>${r.생산일자||''}</td><td>${r.날짜||''}</td><td>${r.날짜||''}</td><td>${r.packaging||''}</td><td style="font-family:var(--mono);font-size:11px">${r.lot번호||''}</td><td style="text-align:right">${r.수입수량||0}</td><td style="text-align:right">${((r.수입수량||0)*25).toLocaleString()}</td><td>${r.운송||''}</td><td></td><td>${r.customer||''}</td><td>${r.비고||''}</td><td>${r.창고||''}</td><td></td></tr>`;});}
+    html2+=`</tbody></table>`;
+    document.getElementById('inbound-table').innerHTML=html2;
+  }
+
+  // ── 입고 등록 ──────────────────────────────────────────────
   async function submitInbound() {
     const lot = document.getElementById('in-lot').value.trim();
     const date = document.getElementById('in-date').value;
-    const qty = parseInt(document.getElementById('in-qty').value);
-    if (!lot || !date || !qty) return toast('Lot번호, 날짜, 수량은 필수입니다.', 'error');
-
+    const qty = parseInt(document.getElementById('in-qty').value)||0;
+    if(!lot||!date||!qty) return toast('Lot번호, 날짜, 수량은 필수입니다.','error');
     const { error } = await db.from('입고').insert({
-      날짜: date,
-      lot번호: lot,
-      수입수량: qty,
-      생산일자: document.getElementById('in-prod-date').value || null,
-      grade: document.getElementById('in-grade').value || null,
-      packaging: document.getElementById('in-pack').value || null,
-      운송: document.getElementById('in-ship').value || null,
-      창고: document.getElementById('in-warehouse').value || null,
-      비고: document.getElementById('in-note').value || null,
+      날짜:date, lot번호:lot, 수입수량:qty,
+      생산수량: parseInt(document.getElementById('in-prod-qty').value)||0,
+      생산일자: document.getElementById('in-prod-date').value||null,
+      grade: document.getElementById('in-grade').value||null,
+      packaging: document.getElementById('in-pack').value||null,
+      운송: document.getElementById('in-ship').value||null,
+      창고: document.getElementById('in-warehouse').value||null,
+      customer: document.getElementById('in-customer').value||null,
+      비고: document.getElementById('in-note').value||null,
     });
-    if (error) return toast('오류: ' + error.message, 'error');
-
+    if(error) return toast('오류: '+error.message,'error');
     toast('입고 등록 완료!');
-    ['in-lot','in-qty','in-grade','in-pack','in-ship','in-warehouse','in-note','in-prod-date'].forEach(id => {
-      const el = document.getElementById(id);
-      el.value = el.tagName === 'SELECT' ? '' : '';
+    ['in-lot','in-qty','in-prod-qty','in-grade','in-pack','in-ship','in-warehouse','in-customer','in-note','in-prod-date'].forEach(id=>{
+      document.getElementById(id).value='';
     });
-    document.getElementById('in-date').value = today();
+    document.getElementById('in-date').value=today();
   }
 
-  // ─── 출고 드롭다운 로드 ──────────────────────────────────────
+  // ── 출고 드롭다운 ──────────────────────────────────────────
   async function loadOutboundDropdowns() {
     const [inRes, outRes] = await Promise.all([
       db.from('입고').select('lot번호, 수입수량'),
       db.from('출고').select('lot번호, 수량, 업체')
     ]);
-    const inData = inRes.data || [];
-    const outData = outRes.data || [];
-
-    // Lot 재고 계산
-    const lotStock = {};
-    inData.forEach(r => { lotStock[r.lot번호] = (lotStock[r.lot번호] || 0) + r.수입수량; });
-    outData.forEach(r => { lotStock[r.lot번호] = (lotStock[r.lot번호] || 0) - r.수량; });
-
-    const lotSel = document.getElementById('out-lot');
-    lotSel.innerHTML = '<option value="">선택</option>' +
-      Object.entries(lotStock).filter(([,v])=>v>0).map(([lot, stock]) =>
-        `<option value="${lot}">${lot} (재고: ${stock.toLocaleString()})</option>`
-      ).join('');
-
-    // 업체 목록
-    const vendors = [...new Set(outData.map(r => r.업체).filter(Boolean))];
-    const vendSel = document.getElementById('out-vendor');
-    vendSel.innerHTML = '<option value="">선택 또는 직접 입력</option>' +
-      vendors.map(v => `<option value="${v}">${v}</option>`).join('');
+    const lotStock={};
+    (inRes.data||[]).forEach(r=>{lotStock[r.lot번호]=(lotStock[r.lot번호]||0)+r.수입수량;});
+    (outRes.data||[]).forEach(r=>{lotStock[r.lot번호]=(lotStock[r.lot번호]||0)-r.수량;});
+    document.getElementById('out-lot').innerHTML='<option value="">선택</option>'+
+      Object.entries(lotStock).filter(([,v])=>v>0).map(([lot,s])=>`<option value="${lot}">${lot} (재고: ${s})</option>`).join('');
+    const vendors=[...new Set((outRes.data||[]).map(r=>r.업체).filter(Boolean))];
+    document.getElementById('out-vendor').innerHTML='<option value="">선택</option>'+vendors.map(v=>`<option>${v}</option>`).join('');
   }
 
-  // ─── 출고 등록 ───────────────────────────────────────────────
+  // ── 출고 등록 ──────────────────────────────────────────────
   async function submitOutbound() {
-    const date = document.getElementById('out-date').value;
-    const vendor = document.getElementById('out-vendor-new').value.trim() ||
-                   document.getElementById('out-vendor').value;
-    const lot = document.getElementById('out-lot').value;
-    const qty = parseInt(document.getElementById('out-qty').value);
-    if (!date || !vendor || !lot || !qty) return toast('날짜, 업체, Lot, 수량은 필수입니다.', 'error');
-
-    const { error } = await db.from('출고').insert({
-      날짜: date, 업체: vendor, lot번호: lot, 수량: qty,
-      비고: document.getElementById('out-note').value || null,
-    });
-    if (error) return toast('오류: ' + error.message, 'error');
-
+    const date=document.getElementById('out-date').value;
+    const vendor=document.getElementById('out-vendor-new').value.trim()||document.getElementById('out-vendor').value;
+    const lot=document.getElementById('out-lot').value;
+    const qty=parseInt(document.getElementById('out-qty').value);
+    if(!date||!vendor||!lot||!qty) return toast('날짜, 업체, Lot, 수량은 필수입니다.','error');
+    const {error}=await db.from('출고').insert({날짜:date,업체:vendor,lot번호:lot,수량:qty,비고:document.getElementById('out-note').value||null});
+    if(error) return toast('오류: '+error.message,'error');
     toast('출고 등록 완료!');
-    document.getElementById('out-qty').value = '';
-    document.getElementById('out-vendor-new').value = '';
-    document.getElementById('out-note').value = '';
-    document.getElementById('out-date').value = today();
+    document.getElementById('out-qty').value='';
+    document.getElementById('out-vendor-new').value='';
+    document.getElementById('out-note').value='';
+    document.getElementById('out-date').value=today();
     loadOutboundDropdowns();
   }
 
-  // ─── 출고 이력 필터 ──────────────────────────────────────────
+  // ── 출고 이력 ──────────────────────────────────────────────
   async function loadHistoryFilters() {
-    const [outRes] = await Promise.all([db.from('출고').select('업체, lot번호')]);
-    const outData = outRes.data || [];
-    const vendors = [...new Set(outData.map(r => r.업체))];
-    const lots = [...new Set(outData.map(r => r.lot번호))];
-
-    document.getElementById('f-vendor').innerHTML = '<option value="">전체</option>' +
-      vendors.map(v => `<option>${v}</option>`).join('');
-    document.getElementById('f-lot').innerHTML = '<option value="">전체</option>' +
-      lots.map(l => `<option>${l}</option>`).join('');
+    const {data}=await db.from('출고').select('업체, lot번호');
+    const vendors=[...new Set((data||[]).map(r=>r.업체))];
+    const lots=[...new Set((data||[]).map(r=>r.lot번호))];
+    document.getElementById('f-vendor').innerHTML='<option value="">전체</option>'+vendors.map(v=>`<option>${v}</option>`).join('');
+    document.getElementById('f-lot').innerHTML='<option value="">전체</option>'+lots.map(l=>`<option>${l}</option>`).join('');
   }
 
   async function loadHistory() {
-    let query = db.from('출고').select('*').order('날짜', { ascending: false });
-    const vendor = document.getElementById('f-vendor').value;
-    const lot = document.getElementById('f-lot').value;
-    const from = document.getElementById('f-from').value;
-    const to = document.getElementById('f-to').value;
-    if (vendor) query = query.eq('업체', vendor);
-    if (lot) query = query.eq('lot번호', lot);
-    if (from) query = query.gte('날짜', from);
-    if (to) query = query.lte('날짜', to);
-
-    const { data, error } = await query;
-    if (error) return toast('오류: ' + error.message, 'error');
-
-    if (!data || data.length === 0) {
-      document.getElementById('history-table-wrap').innerHTML = '<div class="empty">출고 이력이 없습니다.</div>';
-      return;
-    }
-
-    document.getElementById('history-table-wrap').innerHTML = `
-      <table>
-        <thead><tr><th>날짜</th><th>업체</th><th>Lot 번호</th><th>수량</th><th>비고</th></tr></thead>
-        <tbody>${data.map(r => `<tr>
-          <td>${r.날짜}</td>
-          <td>${r.업체}</td>
-          <td class="lot-code">${r.lot번호}</td>
-          <td>${r.수량.toLocaleString()}</td>
-          <td>${r.비고 || '—'}</td>
-        </tr>`).join('')}</tbody>
-      </table>`;
+    let query=db.from('출고').select('*').order('날짜',{ascending:false});
+    const vendor=document.getElementById('f-vendor').value;
+    const lot=document.getElementById('f-lot').value;
+    const from=document.getElementById('f-from').value;
+    const to=document.getElementById('f-to').value;
+    if(vendor) query=query.eq('업체',vendor);
+    if(lot) query=query.eq('lot번호',lot);
+    if(from) query=query.gte('날짜',from);
+    if(to) query=query.lte('날짜',to);
+    const {data,error}=await query;
+    if(error) return toast('오류: '+error.message,'error');
+    if(!data||!data.length){document.getElementById('history-table').innerHTML='<div class="empty">출고 이력이 없습니다.</div>';return;}
+    document.getElementById('history-table').innerHTML=`<table class="inbound-table">
+      <thead><tr><th>날짜</th><th>업체</th><th>Lot 번호</th><th>수량</th><th>비고</th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td>${r.날짜}</td><td>${r.업체}</td>
+        <td style="font-family:var(--mono);font-size:11px">${r.lot번호}</td>
+        <td style="text-align:right">${r.수량}</td><td>${r.비고||''}</td>
+      </tr>`).join('')}</tbody></table>`;
   }
 
   function clearFilters() {
-    ['f-vendor','f-lot','f-from','f-to'].forEach(id => document.getElementById(id).value = '');
+    ['f-vendor','f-lot','f-from','f-to'].forEach(id=>document.getElementById(id).value='');
     loadHistory();
   }
 
-  // ─── 엑셀 export (원본 양식 100% 일치) ────────────────────
+  // ── 엑셀 Export (원본 100% 동일) ───────────────────────────
   async function exportAll() {
     toast('엑셀 생성 중...');
     const [inRes, outRes] = await Promise.all([
       db.from('입고').select('*').order('날짜'),
       db.from('출고').select('*').order('날짜')
     ]);
-    const inData = inRes.data || [];
-    const outData = outRes.data || [];
-    const wb = XLSX.utils.book_new();
+    const inData=inRes.data||[], outData=outRes.data||[];
+    const wb=XLSX.utils.book_new();
 
-    // ── 시트1: 출고 ──────────────────────────────────────────
+    // ── 시트1: 출고 ──
     {
-      const lotMap = {};
-      inData.forEach(r => {
-        if (!lotMap[r.lot번호]) lotMap[r.lot번호] = {
-          lot번호: r.lot번호, 생산일자: r.생산일자 || '-', 수입일자: r.날짜 || '-',
-          생산수량: r.생산수량 || 0, 수입수량: 0, 비고: r.비고 || ''
-        };
-        lotMap[r.lot번호].수입수량 += r.수입수량 || 0;
+      const lotMap={};
+      inData.forEach(r=>{
+        if(!lotMap[r.lot번호]) lotMap[r.lot번호]={lot번호:r.lot번호,생산일자:r.생산일자||'-',수입일자:r.날짜||'-',생산수량:0,수입수량:0,비고:r.비고||''};
+        lotMap[r.lot번호].수입수량+=r.수입수량||0;
+        lotMap[r.lot번호].생산수량+=r.생산수량||0;
       });
-
-      const rawDates = [...new Set(outData.map(r => r.날짜))].sort();
-      const fmtDate = d => { const [,m,day] = d.split('-'); return `${m}/${day}`; };
-
-      const outByLotDate = {};
-      outData.forEach(r => {
-        if (!outByLotDate[r.lot번호]) outByLotDate[r.lot번호] = {};
-        outByLotDate[r.lot번호][r.날짜] = (outByLotDate[r.lot번호][r.날짜] || 0) + r.수량;
+      const rawDates=[...new Set(outData.map(r=>r.날짜))].sort();
+      const fmtDate=d=>{const[,m,day]=d.split('-');return`${m}/${day}`;};
+      const outByLotDate={};
+      outData.forEach(r=>{
+        if(!outByLotDate[r.lot번호]) outByLotDate[r.lot번호]={};
+        outByLotDate[r.lot번호][r.날짜]=(outByLotDate[r.lot번호][r.날짜]||0)+r.수량;
       });
+      const lotList=Object.values(lotMap);
+      const totalCols=7+rawDates.length+1;
 
-      const lotList = Object.values(lotMap);
-      const totalCols = 7 + rawDates.length + 1; // A~G + 날짜들 + 비고
-
-      // 행 1~3: 빈 행
-      const wsData = [
+      const wsData=[
         Array(totalCols).fill(''),
         Array(totalCols).fill(''),
         Array(totalCols).fill(''),
+        ['1. LOT 기준 정보','','','2. 입고 정보 (자동반영)','','3. 재고 및 출고 지표 (자동반영)','','4. 일자별 출고 상세 기록 (우측으로 날짜 확장 가능)',...rawDates.slice(1).map(()=>''),''],
+        ['Lot 번호','생산일자','수입일자','생산 수량','수입 수량','출고 합계\n(자동)','창고 보관 수량\n(현재고)',...rawDates.map(fmtDate),'비고'],
       ];
 
-      // 행 4: 그룹 헤더
-      wsData.push([
-        '1. LOT 기준 정보', '', '',
-        '2. 입고 정보 (자동반영)', '',
-        '3. 재고 및 출고 지표 (자동반영)', '',
-        '4. 일자별 출고 상세 기록 (우측으로 날짜 확장 가능)',
-        ...rawDates.slice(1).map(() => ''),
-        ''
-      ]);
-
-      // 행 5: 컬럼명
-      wsData.push([
-        'Lot 번호', '생산일자', '수입일자',
-        '생산 수량', '수입 수량',
-        '출고 합계\n(자동)', '창고 보관 수량\n(현재고)',
-        ...rawDates.map(fmtDate),
-        '비고'
-      ]);
-
-      // 행 6~: 데이터 (Lot)
-      lotList.forEach((lot, i) => {
-        const outByDate = outByLotDate[lot.lot번호] || {};
-        const rowNum = 6 + i;
-        wsData.push([
-          lot.lot번호, lot.생산일자, lot.수입일자,
-          lot.생산수량, lot.수입수량,
-          { f: `SUM(H${rowNum}:ZY${rowNum})` },
-          { f: `E${rowNum}-F${rowNum}` },
-          ...rawDates.map(d => outByDate[d] || 0),
-          lot.비고
-        ]);
+      lotList.forEach((lot,i)=>{
+        const od=outByLotDate[lot.lot번호]||{};
+        const rowNum=6+i;
+        wsData.push([lot.lot번호,lot.생산일자,lot.수입일자,lot.생산수량,lot.수입수량,{f:`SUM(H${rowNum}:ZY${rowNum})`},{f:`E${rowNum}-F${rowNum}`},...rawDates.map(d=>od[d]||0),lot.비고]);
       });
-
-      // 빈 Lot 행 (총 10개까지)
-      for (let i = 0; i < Math.max(0, 10 - lotList.length); i++) {
-        const rowNum = 6 + lotList.length + i;
-        wsData.push([
-          '-', '-', '-', 0, 0,
-          { f: `SUM(H${rowNum}:ZY${rowNum})` },
-          { f: `E${rowNum}-F${rowNum}` },
-          ...rawDates.map(() => 0), 0
-        ]);
+      for(let i=0;i<Math.max(0,10-lotList.length);i++){
+        const rowNum=6+lotList.length+i;
+        wsData.push(['-','-','-',0,0,{f:`SUM(H${rowNum}:ZY${rowNum})`},{f:`E${rowNum}-F${rowNum}`},...rawDates.map(()=>0),0]);
       }
 
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      const ws=XLSX.utils.aoa_to_sheet(wsData);
 
-      // 병합 셀
-      ws['!merges'] = [
-        { s:{r:3,c:0}, e:{r:3,c:2} },
-        { s:{r:3,c:3}, e:{r:3,c:4} },
-        { s:{r:3,c:5}, e:{r:3,c:6} },
-        { s:{r:3,c:7}, e:{r:3,c:7+rawDates.length} },
+      // 병합
+      ws['!merges']=[
+        {s:{r:3,c:0},e:{r:3,c:2}},{s:{r:3,c:3},e:{r:3,c:4}},
+        {s:{r:3,c:5},e:{r:3,c:6}},{s:{r:3,c:7},e:{r:3,c:7+Math.max(rawDates.length-1,0)}},
       ];
 
-      // 스타일 함수
-      const hdrFill  = { type:'pattern', pattern:'solid', fgColor:{rgb:'1F4E78'} };
-      const colFill  = { type:'pattern', pattern:'solid', fgColor:{rgb:'F2F2F2'} };
-      const sumFill  = { type:'pattern', pattern:'solid', fgColor:{rgb:'FCE4D6'} };
-      const stkFill  = { type:'pattern', pattern:'solid', fgColor:{rgb:'E2EFDA'} };
-      const boldW    = { bold:true, color:{rgb:'FFFFFF'} };
-      const boldB    = { bold:true };
-      const center   = { horizontal:'center', vertical:'center', wrapText:true };
-      const right    = { horizontal:'right' };
+      const enc=XLSX.utils.encode_cell;
+      const thin={style:'thin'};
+      const allBorder={top:thin,bottom:thin,left:thin,right:thin};
 
-      const enc = XLSX.utils.encode_cell;
-
-      // 4행 헤더 스타일
-      for (let c = 0; c < totalCols; c++) {
-        const ref = enc({r:3, c});
-        if (!ws[ref]) ws[ref] = {t:'s', v:''};
-        ws[ref].s = { fill:hdrFill, font:boldW, alignment:center };
+      // 4행: 진한파랑 배경 흰글씨 bold center
+      for(let c=0;c<totalCols;c++){
+        const ref=enc({r:3,c});
+        if(!ws[ref]) ws[ref]={t:'s',v:''};
+        ws[ref].s={fill:{type:'pattern',pattern:'solid',fgColor:{rgb:'1F4E78'}},font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'center',vertical:'center',wrapText:true}};
       }
-
-      // 5행 컬럼명 스타일
-      for (let c = 0; c < totalCols; c++) {
-        const ref = enc({r:4, c});
-        if (!ws[ref]) ws[ref] = {t:'s', v:''};
-        ws[ref].s = { fill:colFill, font:boldB, alignment:center };
+      // 5행: 연회색 배경 bold center + border
+      for(let c=0;c<totalCols;c++){
+        const ref=enc({r:4,c});
+        if(!ws[ref]) ws[ref]={t:'s',v:''};
+        ws[ref].s={fill:{type:'pattern',pattern:'solid',fgColor:{rgb:'F2F2F2'}},font:{bold:true},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:allBorder};
       }
-
-      // 데이터 행 스타일 (6행~)
-      const totalRows = 6 + Math.max(lotList.length, 10);
-      for (let r = 5; r < totalRows; r++) {
-        // A~C: center
-        for (let c = 0; c < 3; c++) {
-          const ref = enc({r, c});
-          if (!ws[ref]) ws[ref] = {t:'s', v:''};
-          ws[ref].s = { alignment: center };
-        }
-        // D~E: right
-        for (let c = 3; c < 5; c++) {
-          const ref = enc({r, c});
-          if (!ws[ref]) ws[ref] = {t:'n', v:0};
-          ws[ref].s = { alignment: right };
-        }
-        // F: 출고합계 (주황 배경, bold, right)
-        const fRef = enc({r, c:5});
-        if (!ws[fRef]) ws[fRef] = {t:'n', v:0};
-        ws[fRef].s = { fill:sumFill, font:boldB, alignment:right };
-        // G: 현재고 (초록 배경, bold, right)
-        const gRef = enc({r, c:6});
-        if (!ws[gRef]) ws[gRef] = {t:'n', v:0};
-        ws[gRef].s = { fill:stkFill, font:boldB, alignment:right };
-        // H~날짜열: right
-        for (let c = 7; c < 7 + rawDates.length; c++) {
-          const ref = enc({r, c});
-          if (!ws[ref]) ws[ref] = {t:'n', v:0};
-          ws[ref].s = { alignment: right };
-        }
+      // 데이터행
+      const totalDataRows=Math.max(lotList.length,10);
+      for(let r=5;r<5+totalDataRows;r++){
+        // A~C: center border
+        for(let c=0;c<3;c++){const ref=enc({r,c});if(!ws[ref])ws[ref]={t:'s',v:''};ws[ref].s={alignment:{horizontal:'center',vertical:'center',wrapText:true},border:allBorder};}
+        // D~E: right border
+        for(let c=3;c<5;c++){const ref=enc({r,c});if(!ws[ref])ws[ref]={t:'n',v:0};ws[ref].s={alignment:{horizontal:'right',vertical:'center'},border:allBorder};}
+        // F: 주황배경 bold right border
+        const fRef=enc({r,c:5});if(!ws[fRef])ws[fRef]={t:'n',v:0};
+        ws[fRef].s={fill:{type:'pattern',pattern:'solid',fgColor:{rgb:'FCE4D6'}},font:{bold:true},alignment:{horizontal:'right',vertical:'center'},border:allBorder};
+        // G: 초록배경 bold right border
+        const gRef=enc({r,c:6});if(!ws[gRef])ws[gRef]={t:'n',v:0};
+        ws[gRef].s={fill:{type:'pattern',pattern:'solid',fgColor:{rgb:'E2EFDA'}},font:{bold:true},alignment:{horizontal:'right',vertical:'center'},border:allBorder};
+        // 날짜열: right border
+        for(let c=7;c<7+rawDates.length;c++){const ref=enc({r,c});if(!ws[ref])ws[ref]={t:'n',v:0};ws[ref].s={alignment:{horizontal:'right',vertical:'center'},border:allBorder};}
+        // 비고: left border
+        const nRef=enc({r,c:7+rawDates.length});if(!ws[nRef])ws[nRef]={t:'s',v:''};ws[nRef].s={alignment:{horizontal:'left',vertical:'center'},border:allBorder};
       }
 
       // 열 너비 (원본 그대로)
-      ws['!cols'] = [
-        {wch:16},{wch:13},{wch:13},{wch:12},{wch:12},
-        {wch:15},{wch:16},
-        ...rawDates.map(()=>({wch:10})),
-        {wch:20}
-      ];
-
+      ws['!cols']=[{wch:16},{wch:13},{wch:13},{wch:12},{wch:12},{wch:15},{wch:16},...rawDates.map(()=>({wch:10})),{wch:20}];
       // 행 높이 (원본 그대로)
-      ws['!rows'] = [
-        {}, {hpt:25}, {}, {hpt:24}, {hpt:28},
-        ...Array(Math.max(lotList.length,10)).fill({hpt:20})
-      ];
+      ws['!rows']=[{},{hpt:25},{},{hpt:24},{hpt:28},...Array(totalDataRows).fill({hpt:20})];
 
-      XLSX.utils.book_append_sheet(wb, ws, '출고');
+      XLSX.utils.book_append_sheet(wb,ws,'출고');
     }
 
-    // ── 시트2: 수입 입고 ─────────────────────────────────────
+    // ── 시트2: 수입 입고 ──
     {
-      const wsData = [[
-        'Status','Grade','Order No.','Production Date','Import Date',
-        '입고일자','Packaging','Batch No.','EA','Quantity\n(KG)',
-        'Shipment','Quilt여부','Customer','Remarks','Warehouse','Comment'
-      ]];
-
-      inData.forEach((r, i) => {
-        const rowNum = i + 2;
-        wsData.push([
-          '입고', r.grade||'', '', r.생산일자||'', r.날짜||'', r.날짜||'',
-          r.packaging||'', r.lot번호||'',
-          r.수입수량||0,
-          { f: `25*I${rowNum}` },
-          r.운송||'', '', '', r.비고||'', r.창고||'', ''
-        ]);
+      const wsData=[['Status','Grade','Order No.','Production Date','Import Date','입고일자','Packaging','Batch No.','EA','Quantity\n(KG)','Shipment','Quilt여부','Customer','Remarks','Warehouse','Comment']];
+      inData.forEach((r,i)=>{
+        const rowNum=i+2;
+        wsData.push(['입고',r.grade||'','',r.생산일자||'',r.날짜||'',r.날짜||'',r.packaging||'',r.lot번호||'',r.수입수량||0,{f:`25*I${rowNum}`},r.운송||'','',r.customer||'',r.비고||'',r.창고||'','']);
       });
-
-      const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-      // 1행 헤더 bold
-      const boldB = { bold:true };
-      for (let c = 0; c < 16; c++) {
-        const ref = XLSX.utils.encode_cell({r:0, c});
-        if (ws[ref]) ws[ref].s = { font: boldB };
-      }
-
-      ws['!cols'] = [
-        {wch:7},{wch:10},{wch:11},{wch:10},{wch:10},
-        {wch:10},{wch:11},{wch:12},{wch:5},{wch:10},
-        {wch:10},{wch:8},{wch:10},{wch:9},{wch:11},{wch:10}
-      ];
-
-      XLSX.utils.book_append_sheet(wb, ws, '수입 입고');
+      const ws=XLSX.utils.aoa_to_sheet(wsData);
+      const thin={style:'thin'};
+      const allBorder={top:thin,bottom:thin,left:thin,right:thin};
+      // 헤더 bold
+      for(let c=0;c<16;c++){const ref=XLSX.utils.encode_cell({r:0,c});if(ws[ref])ws[ref].s={font:{bold:true},border:allBorder};}
+      ws['!cols']=[{wch:7},{wch:10},{wch:11},{wch:10},{wch:10},{wch:10},{wch:11},{wch:12},{wch:5},{wch:10},{wch:10},{wch:8},{wch:10},{wch:9},{wch:11},{wch:10}];
+      XLSX.utils.book_append_sheet(wb,ws,'수입 입고');
     }
 
-    XLSX.writeFile(wb, `재고관리_${today()}.xlsx`);
+    XLSX.writeFile(wb,`재고관리_${today()}.xlsx`);
     toast('엑셀 다운로드 완료!');
   }
 
-  function exportLotStock() { exportAll(); }
-  function exportVendorStock() { exportAll(); }
-  function exportHistory() { exportAll(); }
-
-  // ─── 초기 로드 ───────────────────────────────────────────────
-  loadDashboard();
+  // 초기 로드
+  loadOutboundDropdowns();
 </script>
 </body>
 </html>
