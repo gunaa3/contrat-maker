@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>재고 관리</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -207,6 +208,8 @@
     .btn-primary:hover { background: var(--accent-dim); }
     .btn-ghost { background: var(--surface2); color: var(--text-muted); border: 1px solid var(--border); }
     .btn-ghost:hover { color: var(--text); }
+    .btn-export { background: rgba(76,175,130,0.15); color: var(--success); border: 1px solid rgba(76,175,130,0.3); }
+    .btn-export:hover { background: rgba(76,175,130,0.25); }
 
     /* Filter */
     .filter-bar {
@@ -291,6 +294,7 @@
     <button class="nav-btn" onclick="showPanel('inbound')">입고 등록</button>
     <button class="nav-btn" onclick="showPanel('outbound')">출고 등록</button>
     <button class="nav-btn" onclick="showPanel('history')">출고 이력</button>
+    <button class="btn btn-export" style="margin-left:12px;font-size:12px;padding:7px 14px;" onclick="exportAll()">↓ 엑셀 전체 다운로드</button>
   </nav>
 </header>
 
@@ -318,12 +322,18 @@
     </div>
 
     <div class="card">
-      <div class="card-header">Lot별 재고 현황</div>
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Lot별 재고 현황</span>
+        <button class="btn btn-export" style="font-size:12px;padding:6px 12px;" onclick="exportLotStock()">↓ 엑셀 다운로드</button>
+      </div>
       <div id="lot-table-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
 
     <div class="card vendor-section">
-      <div class="card-header">업체별 출고 현황</div>
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>업체별 출고 현황</span>
+        <button class="btn btn-export" style="font-size:12px;padding:6px 12px;" onclick="exportVendorStock()">↓ 엑셀 다운로드</button>
+      </div>
       <div id="vendor-table-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
   </div>
@@ -457,6 +467,7 @@
         <input type="date" id="f-to" onchange="loadHistory()">
       </div>
       <button class="btn btn-ghost" onclick="clearFilters()">초기화</button>
+      <button class="btn btn-export" onclick="exportHistory()">↓ 엑셀 다운로드</button>
     </div>
     <div class="card">
       <div id="history-table-wrap"><div class="loading">불러오는 중...</div></div>
@@ -711,6 +722,102 @@
     ['f-vendor','f-lot','f-from','f-to'].forEach(id => document.getElementById(id).value = '');
     loadHistory();
   }
+
+  // ─── 엑셀 export (원본 양식 그대로) ─────────────────────────
+  async function exportAll() {
+    toast('엑셀 생성 중...', 'success');
+    const [inRes, outRes] = await Promise.all([
+      db.from('입고').select('*').order('날짜'),
+      db.from('출고').select('*').order('날짜')
+    ]);
+    const inData = inRes.data || [];
+    const outData = outRes.data || [];
+
+    const wb = XLSX.utils.book_new();
+
+    // ── 시트1: 출고 (원본 양식: 행=Lot, 열=날짜별 출고수량) ──
+    {
+      // Lot 정보 집계
+      const lotMap = {};
+      inData.forEach(r => {
+        if (!lotMap[r.lot번호]) lotMap[r.lot번호] = {
+          lot번호: r.lot번호, 생산일자: r.생산일자 || '-', 수입일자: r.날짜 || '-',
+          생산수량: 0, 수입수량: 0, 비고: r.비고 || ''
+        };
+        lotMap[r.lot번호].생산수량 += 0; // 생산수량은 별도 없으면 0
+        lotMap[r.lot번호].수입수량 += r.수입수량 || 0;
+      });
+
+      // 날짜 목록 (출고 기록에서 수집, 정렬)
+      const dates = [...new Set(outData.map(r => r.날짜))].sort();
+
+      // Lot별 날짜별 출고 수량
+      const outByLotDate = {};
+      outData.forEach(r => {
+        if (!outByLotDate[r.lot번호]) outByLotDate[r.lot번호] = {};
+        outByLotDate[r.lot번호][r.날짜] = (outByLotDate[r.lot번호][r.날짜] || 0) + r.수량;
+      });
+
+      // 헤더 행 1 (그룹 레이블)
+      const header1 = ['1. LOT 기준 정보', '', '', '2. 입고 정보', '', '3. 재고 및 출고 지표', '', '4. 일자별 출고 상세 기록', ...dates.slice(1).map(() => ''), '비고'];
+      // 헤더 행 2 (컬럼명)
+      const header2 = ['Lot 번호', '생산일자', '수입일자', '생산 수량', '수입 수량', '출고 합계 (자동)', '창고 보관 수량 (현재고)', ...dates, '비고'];
+
+      const wsData = [header1, header2];
+
+      Object.values(lotMap).forEach(lot => {
+        const outByDate = outByLotDate[lot.lot번호] || {};
+        const totalOut = dates.reduce((s, d) => s + (outByDate[d] || 0), 0);
+        const stock = lot.수입수량 - totalOut;
+        const row = [
+          lot.lot번호, lot.생산일자, lot.수입일자,
+          lot.생산수량 || 0, lot.수입수량,
+          totalOut, stock,
+          ...dates.map(d => outByDate[d] || 0),
+          lot.비고
+        ];
+        wsData.push(row);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      XLSX.utils.book_append_sheet(wb, ws, '출고');
+    }
+
+    // ── 시트2: 수입 입고 (원본 양식 그대로) ──
+    {
+      const header = ['Status', 'Grade', 'Order No.', 'Production Date', 'Import Date', '입고일자', 'Packaging', 'Batch No.', 'EA', 'Quantity (KG)', 'Shipment', 'Customer', 'Remarks', 'Warehouse', 'Comment'];
+      const wsData = [header];
+      inData.forEach(r => {
+        wsData.push([
+          '입고',
+          r.grade || '',
+          '',
+          r.생산일자 || '',
+          r.날짜 || '',
+          r.날짜 || '',
+          r.packaging || '',
+          r.lot번호 || '',
+          r.수입수량 || 0,
+          '',
+          r.운송 || '',
+          '',
+          r.비고 || '',
+          r.창고 || '',
+          ''
+        ]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(wsData);
+      XLSX.utils.book_append_sheet(wb, ws, '수입 입고');
+    }
+
+    XLSX.writeFile(wb, `재고관리_${today()}.xlsx`);
+    toast('엑셀 다운로드 완료!');
+  }
+
+  // 기존 버튼들도 exportAll 로 연결
+  function exportLotStock() { exportAll(); }
+  function exportVendorStock() { exportAll(); }
+  function exportHistory() { exportAll(); }
 
   // ─── 초기 로드 ───────────────────────────────────────────────
   loadDashboard();
