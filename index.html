@@ -723,90 +723,166 @@
     loadHistory();
   }
 
-  // ─── 엑셀 export (원본 양식 그대로) ─────────────────────────
+  // ─── 엑셀 export (원본 양식 완전 일치) ──────────────────────
   async function exportAll() {
-    toast('엑셀 생성 중...', 'success');
+    toast('엑셀 생성 중...');
     const [inRes, outRes] = await Promise.all([
       db.from('입고').select('*').order('날짜'),
       db.from('출고').select('*').order('날짜')
     ]);
     const inData = inRes.data || [];
     const outData = outRes.data || [];
-
     const wb = XLSX.utils.book_new();
 
-    // ── 시트1: 출고 (원본 양식: 행=Lot, 열=날짜별 출고수량) ──
+    // ── 시트1: 출고 ──────────────────────────────────────────
     {
-      // Lot 정보 집계
+      // Lot 정보
       const lotMap = {};
       inData.forEach(r => {
         if (!lotMap[r.lot번호]) lotMap[r.lot번호] = {
-          lot번호: r.lot번호, 생산일자: r.생산일자 || '-', 수입일자: r.날짜 || '-',
-          생산수량: 0, 수입수량: 0, 비고: r.비고 || ''
+          lot번호: r.lot번호,
+          생산일자: r.생산일자 || '-',
+          수입일자: r.날짜 || '-',
+          생산수량: 0,
+          수입수량: 0,
+          비고: r.비고 || ''
         };
-        lotMap[r.lot번호].생산수량 += 0; // 생산수량은 별도 없으면 0
         lotMap[r.lot번호].수입수량 += r.수입수량 || 0;
       });
 
-      // 날짜 목록 (출고 기록에서 수집, 정렬)
-      const dates = [...new Set(outData.map(r => r.날짜))].sort();
+      // 날짜 목록 MM/DD 형식
+      const rawDates = [...new Set(outData.map(r => r.날짜))].sort();
+      const fmtDate = d => {
+        const [,m,day] = d.split('-');
+        return `${m}/${day}`;
+      };
 
-      // Lot별 날짜별 출고 수량
+      // Lot별 날짜별 출고
       const outByLotDate = {};
       outData.forEach(r => {
         if (!outByLotDate[r.lot번호]) outByLotDate[r.lot번호] = {};
         outByLotDate[r.lot번호][r.날짜] = (outByLotDate[r.lot번호][r.날짜] || 0) + r.수량;
       });
 
-      // 헤더 행 1 (그룹 레이블)
-      const header1 = ['1. LOT 기준 정보', '', '', '2. 입고 정보', '', '3. 재고 및 출고 지표', '', '4. 일자별 출고 상세 기록', ...dates.slice(1).map(() => ''), '비고'];
-      // 헤더 행 2 (컬럼명)
-      const header2 = ['Lot 번호', '생산일자', '수입일자', '생산 수량', '수입 수량', '출고 합계 (자동)', '창고 보관 수량 (현재고)', ...dates, '비고'];
+      // 행 1~3: 빈 행 (원본처럼 4행부터 헤더)
+      const emptyRow = Array(7 + rawDates.length + 1).fill('');
+      const wsData = [emptyRow.slice(), emptyRow.slice(), emptyRow.slice()];
 
-      const wsData = [header1, header2];
+      // 행 4: 그룹 헤더
+      const grpRow = [
+        '1. LOT 기준 정보', '', '',
+        '2. 입고 정보 (자동반영)', '',
+        '3. 재고 및 출고 지표 (자동반영)', '',
+        '4. 일자별 출고 상세 기록 (우측으로 날짜 확장 가능)',
+        ...rawDates.slice(1).map(() => ''),
+        '비고'
+      ];
+      wsData.push(grpRow);
 
-      Object.values(lotMap).forEach(lot => {
+      // 행 5: 컬럼명
+      const colRow = [
+        'Lot 번호', '생산일자', '수입일자',
+        '생산 수량', '수입 수량',
+        '출고 합계\n(자동)', '창고 보관 수량\n(현재고)',
+        ...rawDates.map(fmtDate),
+        '비고'
+      ];
+      wsData.push(colRow);
+
+      // 데이터 행 (Lot 있는 것) - F=SUM수식, G=재고수식
+      const lotList = Object.values(lotMap);
+      const lastDateCol = XLSX.utils.encode_col(7 + rawDates.length - 1);
+
+      lotList.forEach((lot, i) => {
         const outByDate = outByLotDate[lot.lot번호] || {};
-        const totalOut = dates.reduce((s, d) => s + (outByDate[d] || 0), 0);
-        const stock = lot.수입수량 - totalOut;
-        const row = [
+        const rowNum = 6 + i; // 1~3빈행 + 그룹헤더 + 컬럼행 = 5행, 데이터 6행~
+        wsData.push([
           lot.lot번호, lot.생산일자, lot.수입일자,
           lot.생산수량 || 0, lot.수입수량,
-          totalOut, stock,
-          ...dates.map(d => outByDate[d] || 0),
+          { f: `SUM(H${rowNum}:${lastDateCol}${rowNum})` },
+          { f: `E${rowNum}-F${rowNum}` },
+          ...rawDates.map(d => outByDate[d] || 0),
           lot.비고
-        ];
-        wsData.push(row);
+        ]);
       });
 
+      // 빈 Lot 행 (원본처럼 10개까지 채우기)
+      const emptyLotCount = Math.max(0, 10 - lotList.length);
+      for (let i = 0; i < emptyLotCount; i++) {
+        const rowNum = 6 + lotList.length + i;
+        wsData.push([
+          '-', '-', '-', 0, 0,
+          { f: `SUM(H${rowNum}:${lastDateCol}${rowNum})` },
+          { f: `E${rowNum}-F${rowNum}` },
+          ...rawDates.map(() => 0), 0
+        ]);
+      }
+
       const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+      // 셀 병합 (그룹 헤더)
+      ws['!merges'] = [
+        { s:{r:3,c:0}, e:{r:3,c:2} },  // 1. LOT 기준 정보
+        { s:{r:3,c:3}, e:{r:3,c:4} },  // 2. 입고 정보
+        { s:{r:3,c:5}, e:{r:3,c:6} },  // 3. 재고 및 출고 지표
+        { s:{r:3,c:7}, e:{r:3,c:6+rawDates.length} }, // 4. 일자별
+      ];
+
+      // 스타일: 그룹 헤더 배경색
+      const headerStyle = { fill: { fgColor: { rgb: '1F4E79' } }, font: { color: { rgb: 'FFFFFF' }, bold: true }, alignment: { horizontal: 'center' } };
+      const colStyle = { font: { bold: true }, alignment: { horizontal: 'center', wrapText: true } };
+
+      // 그룹 헤더 행 스타일
+      const grpCols = ['A','B','C','D','E','F','G'];
+      rawDates.forEach((_,i) => grpCols.push(String.fromCharCode(72+i))); // H부터
+      grpCols.forEach(col => {
+        const cell = col + '4';
+        if (ws[cell]) ws[cell].s = headerStyle;
+      });
+      // 컬럼명 행 스타일
+      grpCols.forEach(col => {
+        const cell = col + '5';
+        if (ws[cell]) ws[cell].s = colStyle;
+      });
+
+      // 현재고 셀 색상 (재고 마이너스=빨강, 정상=초록)
+      lotList.forEach((lot, i) => {
+        const outByDate = outByLotDate[lot.lot번호] || {};
+        const totalOut = rawDates.reduce((s, d) => s + (outByDate[d] || 0), 0);
+        const stock = lot.수입수량 - totalOut;
+        const rowIdx = 6 + i;
+        const cellRef = 'G' + rowIdx;
+        if (!ws[cellRef]) ws[cellRef] = { t:'n', f: `E${rowIdx}-F${rowIdx}` };
+        ws[cellRef].s = {
+          fill: { fgColor: { rgb: stock < 0 ? 'FFCCCC' : 'CCFFCC' } },
+          font: { bold: true }
+        };
+      });
+
+      // 열 너비
+      ws['!cols'] = [
+        {wch:18},{wch:12},{wch:12},{wch:10},{wch:10},{wch:12},{wch:14},
+        ...rawDates.map(()=>({wch:8})),
+        {wch:20}
+      ];
+
       XLSX.utils.book_append_sheet(wb, ws, '출고');
     }
 
-    // ── 시트2: 수입 입고 (원본 양식 그대로) ──
+    // ── 시트2: 수입 입고 ─────────────────────────────────────
     {
-      const header = ['Status', 'Grade', 'Order No.', 'Production Date', 'Import Date', '입고일자', 'Packaging', 'Batch No.', 'EA', 'Quantity (KG)', 'Shipment', 'Customer', 'Remarks', 'Warehouse', 'Comment'];
-      const wsData = [header];
+      const wsData = [
+        ['Status','Grade','Order No.','Production Date','Import Date','입고일자','Packaging','Batch No.','EA','Quantity (KG)','Shipment','Quilt여부','Customer','Remarks','Warehouse','Comment']
+      ];
       inData.forEach(r => {
         wsData.push([
-          '입고',
-          r.grade || '',
-          '',
-          r.생산일자 || '',
-          r.날짜 || '',
-          r.날짜 || '',
-          r.packaging || '',
-          r.lot번호 || '',
-          r.수입수량 || 0,
-          '',
-          r.운송 || '',
-          '',
-          r.비고 || '',
-          r.창고 || '',
-          ''
+          '입고', r.grade||'', '', r.생산일자||'', r.날짜||'', r.날짜||'',
+          r.packaging||'', r.lot번호||'', r.수입수량||0, '',
+          r.운송||'', '', '', r.비고||'', r.창고||'', ''
         ]);
       });
       const ws = XLSX.utils.aoa_to_sheet(wsData);
+      ws['!cols'] = Array(16).fill({wch:14});
       XLSX.utils.book_append_sheet(wb, ws, '수입 입고');
     }
 
@@ -814,7 +890,6 @@
     toast('엑셀 다운로드 완료!');
   }
 
-  // 기존 버튼들도 exportAll 로 연결
   function exportLotStock() { exportAll(); }
   function exportVendorStock() { exportAll(); }
   function exportHistory() { exportAll(); }
