@@ -1039,14 +1039,11 @@
     loadGradeData();
   }
 
-  // showPanel에 grade 추가
-  const _origShowPanel = showPanel;
-
   // 초기 로드 - 마지막 탭 복원
-  const lastPanel = localStorage.getItem('lastPanel') || 'inbound';
-  showPanel(lastPanel);
   loadGradeData();
   loadDashboard();
+  const lastPanel = localStorage.getItem('lastPanel') || 'inbound';
+  showPanel(lastPanel);
 </script>
 </body>
 </html>
