@@ -187,6 +187,7 @@
     <button class="nav-btn" onclick="showPanel('history',this)">출고 이력</button>
     <button class="nav-btn" onclick="showPanel('dashboard',this)">재고 현황</button>
     <button class="nav-btn" onclick="showPanel('excelview',this)">엑셀 뷰</button>
+    <button class="nav-btn" onclick="showPanel('grade',this)">Grade 관리</button>
     <button class="btn-export" onclick="exportAll()">↓ 엑셀 다운로드</button>
   </nav>
 </header>
@@ -233,6 +234,24 @@
     </div>
   </div>
 
+  <!-- ── Grade 관리 ── -->
+  <div id="panel-grade" class="panel">
+    <div class="section-header"><div class="section-title">Grade 관리</div></div>
+    <div class="card">
+      <div class="card-header">새 Grade 등록</div>
+      <div class="form-grid">
+        <div class="form-group"><label>Grade / Status</label><input type="text" id="g-name" placeholder="예: DVSTS029"></div>
+        <div class="form-group"><label>KG / 단위 (드럼/Pail 등)</label><input type="number" id="g-kg" placeholder="예: 289" step="0.01"></div>
+        <div class="form-group form-full"><label>비고</label><input type="text" id="g-note" placeholder="메모 (선택)"></div>
+      </div>
+      <div class="form-actions"><button class="btn btn-primary" onclick="submitGrade()">Grade 등록</button></div>
+    </div>
+    <div class="card">
+      <div class="card-header">등록된 Grade 목록</div>
+      <div id="grade-table-wrap"><div class="loading">불러오는 중...</div></div>
+    </div>
+  </div>
+
   <!-- ── 입고 등록 ── -->
   <div id="panel-inbound" class="panel active">
     <div class="section-header"><div class="section-title">입고 등록</div></div>
@@ -244,7 +263,16 @@
         <div class="form-group"><label>생산일자</label><input type="date" id="in-prod-date"></div>
         <div class="form-group"><label>수입 수량 (EA)</label><input type="number" id="in-qty" placeholder="0" min="0"></div>
         <div class="form-group"><label>생산 수량</label><input type="number" id="in-prod-qty" placeholder="0" min="0"></div>
-        <div class="form-group"><label>Grade / Status</label><input type="text" id="in-grade" placeholder="예: DVSTS029"></div>
+        <div class="form-group"><label>Grade / Status</label>
+          <input type="text" id="in-grade" placeholder="예: DVSTS029" list="grade-list" autocomplete="off" oninput="updateKg()">
+          <datalist id="grade-list"></datalist>
+        </div>
+        <div class="form-group"><label>KG / 단위 <span id="kg-unit-label" style="color:var(--accent);font-weight:600"></span></label>
+          <input type="number" id="in-kg-unit" placeholder="자동입력 (직접 수정 가능)" step="0.01">
+        </div>
+        <div class="form-group"><label>총 KG <span id="kg-total-label" style="color:var(--text-muted);font-size:11px">(수량 × KG/단위)</span></label>
+          <input type="number" id="in-kg-total" placeholder="자동계산" step="0.01" readonly style="background:var(--surface2);color:var(--text-muted)">
+        </div>
         <div class="form-group"><label>Packaging</label><select id="in-pack"><option value="">선택</option><option>Pail</option><option>Drum</option><option>Box</option><option>기타</option></select></div>
         <div class="form-group"><label>운송 방법</label><select id="in-ship"><option value="">선택</option><option>해상</option><option>항공</option></select></div>
         <div class="form-group"><label>창고</label><input type="text" id="in-warehouse" placeholder="예: 용인"></div>
@@ -455,6 +483,8 @@
     const date = document.getElementById('in-date').value;
     const qty = parseInt(document.getElementById('in-qty').value)||0;
     if(!lot||!date||!qty) return toast('Lot번호, 날짜, 수량은 필수입니다.','error');
+    const kgUnit = parseFloat(document.getElementById('in-kg-unit').value)||null;
+    const kgTotal = parseFloat(document.getElementById('in-kg-total').value)||null;
     const { error } = await db.from('입고').insert({
       날짜:date, lot번호:lot, 수입수량:qty,
       생산수량: parseInt(document.getElementById('in-prod-qty').value)||0,
@@ -465,12 +495,15 @@
       창고: document.getElementById('in-warehouse').value||null,
       customer: document.getElementById('in-customer').value||null,
       비고: document.getElementById('in-note').value||null,
+      kg_per_unit: kgUnit,
+      kg_total: kgTotal,
     });
     if(error) return toast('오류: '+error.message,'error');
     toast('입고 등록 완료!');
-    ['in-lot','in-qty','in-prod-qty','in-grade','in-pack','in-ship','in-warehouse','in-customer','in-note','in-prod-date'].forEach(id=>{
+    ['in-lot','in-qty','in-prod-qty','in-grade','in-pack','in-ship','in-warehouse','in-customer','in-note','in-prod-date','in-kg-unit','in-kg-total'].forEach(id=>{
       document.getElementById(id).value='';
     });
+    document.getElementById('kg-unit-label').textContent='';
     document.getElementById('in-date').value=today();
   }
 
@@ -659,8 +692,88 @@
     toast('엑셀 다운로드 완료!');
   }
 
+  // ── Grade 관련 ────────────────────────────────────────────
+  let gradeMap = {}; // { 'DVSTS029': 289, ... }
+
+  async function loadGradeData() {
+    const { data } = await db.from('grade').select('*').order('grade');
+    gradeMap = {};
+    (data||[]).forEach(r => { gradeMap[r.grade] = r.kg_per_unit; });
+    // datalist 업데이트
+    const dl = document.getElementById('grade-list');
+    if(dl) dl.innerHTML = Object.keys(gradeMap).map(g=>`<option value="${g}">`).join('');
+    return data||[];
+  }
+
+  function updateKg() {
+    const grade = document.getElementById('in-grade').value.trim();
+    const qty = parseFloat(document.getElementById('in-qty').value)||0;
+    const kgUnit = gradeMap[grade];
+    const kgInput = document.getElementById('in-kg-unit');
+    const kgTotal = document.getElementById('in-kg-total');
+    const kgLabel = document.getElementById('kg-unit-label');
+    if(kgUnit) {
+      kgInput.value = kgUnit;
+      kgLabel.textContent = `(${kgUnit} KG/단위)`;
+    }
+    const unit = parseFloat(kgInput.value)||0;
+    if(qty && unit) kgTotal.value = (qty * unit).toFixed(2);
+    else kgTotal.value = '';
+  }
+
+  // 수량 바뀔 때도 총 KG 업데이트
+  document.getElementById('in-qty').addEventListener('input', updateKg);
+  document.getElementById('in-kg-unit').addEventListener('input', () => {
+    const qty = parseFloat(document.getElementById('in-qty').value)||0;
+    const unit = parseFloat(document.getElementById('in-kg-unit').value)||0;
+    const kgTotal = document.getElementById('in-kg-total');
+    if(qty && unit) kgTotal.value = (qty * unit).toFixed(2);
+    else kgTotal.value = '';
+  });
+
+  async function submitGrade() {
+    const name = document.getElementById('g-name').value.trim();
+    const kg = parseFloat(document.getElementById('g-kg').value);
+    if(!name||!kg) return toast('Grade명과 KG는 필수입니다.','error');
+    const {error} = await db.from('grade').upsert({grade:name, kg_per_unit:kg, 비고:document.getElementById('g-note').value||null}, {onConflict:'grade'});
+    if(error) return toast('오류: '+error.message,'error');
+    toast('Grade 등록 완료!');
+    document.getElementById('g-name').value='';
+    document.getElementById('g-kg').value='';
+    document.getElementById('g-note').value='';
+    loadGradeTable();
+    loadGradeData();
+  }
+
+  async function loadGradeTable() {
+    const data = await loadGradeData();
+    if(!data.length){document.getElementById('grade-table-wrap').innerHTML='<div class="empty">등록된 Grade가 없습니다.</div>';return;}
+    document.getElementById('grade-table-wrap').innerHTML=`<table class="dash-table">
+      <thead><tr><th>Grade / Status</th><th>KG / 단위</th><th>비고</th><th></th></tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td style="font-family:var(--mono);font-weight:600;color:var(--accent)">${r.grade}</td>
+        <td><strong>${r.kg_per_unit}</strong> KG</td>
+        <td>${r.비고||'—'}</td>
+        <td><button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="deleteGrade(${r.id})">삭제</button></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  async function deleteGrade(id) {
+    if(!confirm('삭제할까요?')) return;
+    const {error} = await db.from('grade').delete().eq('id',id);
+    if(error) return toast('오류: '+error.message,'error');
+    toast('삭제 완료!');
+    loadGradeTable();
+    loadGradeData();
+  }
+
+  // showPanel에 grade 추가
+  const _origShowPanel = showPanel;
+
   // 초기 로드
   loadOutboundDropdowns();
+  loadGradeData();
 </script>
 </body>
 </html>
