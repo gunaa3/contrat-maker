@@ -219,6 +219,11 @@
         <div class="section-title">출고 현황 (엑셀 뷰)</div>
         <div class="section-sub">Lot별 입출고 및 일자별 출고 상세</div>
       </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="excel-vendor-filter" onchange="loadExcelView()" style="min-width:140px;padding:6px 10px;border-radius:7px;border:1px solid var(--border-strong);font-size:13px;background:var(--surface)">
+          <option value="">전체 업체</option>
+        </select>
+      </div>
     </div>
     <div class="excel-wrap">
       <div id="dashboard-table"><div class="loading">불러오는 중...</div></div>
@@ -415,19 +420,33 @@
     ]);
     const inData=inRes.data||[], outData=outRes.data||[];
 
+    // 업체 필터 드롭다운 업데이트
+    const vendors=[...new Set(outData.map(r=>r.업체).filter(Boolean))];
+    const sel=document.getElementById('excel-vendor-filter');
+    const curVal=sel.value;
+    sel.innerHTML='<option value="">전체 업체</option>'+vendors.map(v=>`<option value="${v}" ${v===curVal?'selected':''}>${v}</option>`).join('');
+
+    const selectedVendor=sel.value;
+
+    // 선택된 업체로 출고 필터
+    const filteredOut = selectedVendor ? outData.filter(r=>r.업체===selectedVendor) : outData;
+
     const lotMap={};
     inData.forEach(r=>{
       if(!lotMap[r.lot번호]) lotMap[r.lot번호]={lot번호:r.lot번호,생산일자:r.생산일자||'-',수입일자:r.날짜||'-',생산수량:0,수입수량:0,비고:r.비고||''};
       lotMap[r.lot번호].수입수량+=r.수입수량||0;
       lotMap[r.lot번호].생산수량+=r.생산수량||0;
     });
-    const rawDates=[...new Set(outData.map(r=>r.날짜))].sort();
+
+    const rawDates=[...new Set(filteredOut.map(r=>r.날짜))].sort();
     const fmtDate=d=>{const[,m,day]=d.split('-');return`${m}/${day}`;};
+
     const outByLotDate={};
-    outData.forEach(r=>{
+    filteredOut.forEach(r=>{
       if(!outByLotDate[r.lot번호]) outByLotDate[r.lot번호]={};
       outByLotDate[r.lot번호][r.날짜]=(outByLotDate[r.lot번호][r.날짜]||0)+r.수량;
     });
+
     const lotList=Object.values(lotMap);
     const dateCols=rawDates.length||1;
 
@@ -435,32 +454,34 @@
       <tr class="row-group">
         <th colspan="3">1. LOT 기준 정보</th>
         <th colspan="2">2. 입고 정보 (자동반영)</th>
-        <th colspan="2">3. 재고 및 출고 지표 (자동반영)</th>
+        <th colspan="2">3. 재고 및 출고 지표${selectedVendor?` (${selectedVendor})`:'(자동반영)'}</th>
         <th colspan="${dateCols}">4. 일자별 출고 상세 기록 (우측으로 날짜 확장 가능)</th>
         <th></th>
       </tr>
       <tr class="row-col">
         <th>Lot 번호</th><th>생산일자</th><th>수입일자</th>
         <th>생산 수량</th><th>수입 수량</th>
-        <th>출고 합계<br>(자동)</th><th>창고 보관 수량<br>(현재고)</th>
-        ${rawDates.map(d=>`<th>${fmtDate(d)}</th>`).join('')}
+        <th>출고 합계<br>(자동)</th><th>${selectedVendor?selectedVendor+' 출고':'창고 보관 수량'}<br>${selectedVendor?'수량':'(현재고)'}</th>
+        ${rawDates.length?rawDates.map(d=>`<th>${fmtDate(d)}</th>`).join(''):'<th>—</th>'}
         <th>비고</th>
       </tr></thead><tbody>`;
 
     lotList.forEach(lot=>{
       const od=outByLotDate[lot.lot번호]||{};
       const totalOut=rawDates.reduce((s,d)=>s+(od[d]||0),0);
-      const stock=lot.수입수량-totalOut;
+      // 현재고는 항상 전체 출고 기준
+      const totalOutAll=outData.filter(r=>r.lot번호===lot.lot번호).reduce((s,r)=>s+r.수량,0);
+      const stock=selectedVendor?totalOut:(lot.수입수량-totalOutAll);
       html+=`<tr class="row-data">
         <td class="lot-id">${lot.lot번호}</td>
         <td class="center">${lot.생산일자}</td><td class="center">${lot.수입일자}</td>
         <td class="right">${lot.생산수량}</td><td class="right">${lot.수입수량}</td>
         <td class="sum">${totalOut}</td><td class="stock">${stock}</td>
-        ${rawDates.map(d=>`<td class="right">${od[d]||0}</td>`).join('')}
+        ${rawDates.length?rawDates.map(d=>`<td class="right">${od[d]||0}</td>`).join(''):'<td class="right">0</td>'}
         <td>${lot.비고}</td></tr>`;
     });
     for(let i=0;i<Math.max(0,10-lotList.length);i++){
-      html+=`<tr class="row-data"><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td><td class="right">0</td><td class="right">0</td><td class="sum">0</td><td class="stock">0</td>${rawDates.map(()=>`<td class="right">0</td>`).join('')}<td></td></tr>`;
+      html+=`<tr class="row-data"><td class="empty">-</td><td class="empty">-</td><td class="empty">-</td><td class="right">0</td><td class="right">0</td><td class="sum">0</td><td class="stock">0</td>${rawDates.length?rawDates.map(()=>`<td class="right">0</td>`).join(''):'<td class="right">0</td>'}<td></td></tr>`;
     }
     html+=`</tbody></table>`;
     document.getElementById('dashboard-table').innerHTML=html;
@@ -472,7 +493,7 @@
       <th>Customer</th><th>Remarks</th><th>Warehouse</th><th>Comment</th>
     </tr></thead><tbody>`;
     if(!inData.length){html2+=`<tr><td colspan="16" class="empty">입고 데이터가 없습니다.</td></tr>`;}
-    else{inData.forEach((r,i)=>{html2+=`<tr><td>입고</td><td>${r.grade||''}</td><td></td><td>${r.생산일자||''}</td><td>${r.날짜||''}</td><td>${r.날짜||''}</td><td>${r.packaging||''}</td><td style="font-family:var(--mono);font-size:11px">${r.lot번호||''}</td><td style="text-align:right">${r.수입수량||0}</td><td style="text-align:right">${((r.수입수량||0)*25).toLocaleString()}</td><td>${r.운송||''}</td><td></td><td>${r.customer||''}</td><td>${r.비고||''}</td><td>${r.창고||''}</td><td></td></tr>`;});}
+    else{inData.forEach(r=>{html2+=`<tr><td>입고</td><td>${r.grade||''}</td><td></td><td>${r.생산일자||''}</td><td>${r.날짜||''}</td><td>${r.날짜||''}</td><td>${r.packaging||''}</td><td style="font-family:var(--mono);font-size:11px">${r.lot번호||''}</td><td style="text-align:right">${r.수입수량||0}</td><td style="text-align:right">${(r.kg_total||0).toLocaleString()}</td><td>${r.운송||''}</td><td></td><td>${r.customer||''}</td><td>${r.비고||''}</td><td>${r.창고||''}</td><td></td></tr>`;});}
     html2+=`</tbody></table>`;
     document.getElementById('inbound-table').innerHTML=html2;
   }
