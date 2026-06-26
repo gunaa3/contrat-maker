@@ -165,6 +165,13 @@
     .dash-table td { padding:11px 14px; border-bottom:1px solid var(--border); }
     .dash-table tr:last-child td { border-bottom:none; }
     .dash-table tr:hover td { background:#fafbff; }
+    /* 경고 배너 */
+    .alert-item { display:flex; align-items:center; gap:10px; padding:10px 16px; border-radius:8px; margin-bottom:8px; font-size:13px; font-weight:500; }
+    .alert-danger { background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; }
+    .alert-warning { background:var(--warning-bg); color:var(--warning); border:1px solid #fde68a; }
+    .alert-info { background:var(--accent-soft); color:var(--accent); border:1px solid #c7d2fe; }
+    #alert-banner { margin-bottom:16px; }
+
     .badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:600; }
     .badge-ok { background:var(--success-bg); color:var(--success); }
     .badge-low { background:var(--warning-bg); color:var(--warning); }
@@ -204,18 +211,28 @@
 
 <main class="main">
 
-  <!-- ── 재고 현황 (카드 스타일) ── -->
+  <!-- ── 재고 현황 (대시보드) ── -->
   <div id="panel-dashboard" class="panel">
-    <div class="metrics">
+
+    <!-- 경고 배너 -->
+    <div id="alert-banner"></div>
+
+    <!-- 핵심 지표 -->
+    <div class="metrics" style="grid-template-columns:repeat(5,1fr)">
       <div class="metric"><div class="metric-label">총 Lot 수</div><div class="metric-value accent" id="m-lots">—</div></div>
-      <div class="metric"><div class="metric-label">총 입고</div><div class="metric-value" id="m-total-in">—</div></div>
-      <div class="metric"><div class="metric-label">총 출고</div><div class="metric-value" id="m-total-out">—</div></div>
-      <div class="metric"><div class="metric-label">현재 재고</div><div class="metric-value success" id="m-stock">—</div></div>
+      <div class="metric"><div class="metric-label">현재 재고 (EA)</div><div class="metric-value success" id="m-stock">—</div></div>
+      <div class="metric"><div class="metric-label">현재 재고 (KG)</div><div class="metric-value success" id="m-stock-kg">—</div></div>
+      <div class="metric"><div class="metric-label">이번 달 입고</div><div class="metric-value accent" id="m-month-in">—</div></div>
+      <div class="metric"><div class="metric-label">이번 달 출고</div><div class="metric-value warning" id="m-month-out">—</div></div>
     </div>
+
+    <!-- Lot별 상세 -->
     <div class="card">
       <div class="card-header">Lot별 재고 현황</div>
       <div id="lot-table-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
+
+    <!-- 업체별 -->
     <div class="card">
       <div class="card-header">업체별 출고 현황</div>
       <div id="vendor-table-wrap"><div class="loading">불러오는 중...</div></div>
@@ -426,54 +443,116 @@
     if(name==='outbound') loadOutboundDropdowns();
     if(name==='history') { loadHistoryFilters(); loadHistory(); }
     if(name==='grade') loadGradeTable();
-    if(name==='inbound-history') loadInboundHistoryFilters().then(()=>loadInboundHistory());
+    if(name==='inbound-history') (async()=>{ await loadInboundHistoryFilters(); await loadInboundHistory(); })();
   }
 
-  // ── 대시보드: 카드 스타일 ──────────────────────────────────
+  // ── 대시보드 ────────────────────────────────────────────────
   async function loadDashboard() {
     const [inRes, outRes] = await Promise.all([
       db.from('입고').select('*'),
       db.from('출고').select('*')
     ]);
     const inData = inRes.data||[], outData = outRes.data||[];
+    const now = new Date();
+    const thisMonth = now.toISOString().slice(0,7); // YYYY-MM
+    const thirtyDaysAgo = new Date(now - 30*24*60*60*1000).toISOString().split('T')[0];
 
+    // Lot 집계
     const lotMap = {};
     inData.forEach(r => {
-      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {lot번호:r.lot번호, 수입일:r.날짜, in:0, out:0};
+      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {
+        lot번호:r.lot번호, 수입일:r.날짜, in:0, out:0, kg_total:0,
+        out30:0 // 최근 30일 출고
+      };
       lotMap[r.lot번호].in += r.수입수량||0;
+      lotMap[r.lot번호].kg_total += r.kg_total||0;
     });
     outData.forEach(r => {
-      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {lot번호:r.lot번호, 수입일:'—', in:0, out:0};
+      if(!lotMap[r.lot번호]) lotMap[r.lot번호] = {lot번호:r.lot번호, 수입일:'—', in:0, out:0, kg_total:0, out30:0};
       lotMap[r.lot번호].out += r.수량||0;
+      if(r.날짜 >= thirtyDaysAgo) lotMap[r.lot번호].out30 += r.수량||0;
     });
+
     const lotList = Object.values(lotMap);
     const totalIn = lotList.reduce((s,l)=>s+l.in,0);
     const totalOut = lotList.reduce((s,l)=>s+l.out,0);
+    const totalStock = totalIn - totalOut;
+    const totalKg = lotList.reduce((s,l)=>s+(l.kg_total||0),0);
 
+    // 이번 달 입고/출고
+    const monthIn = inData.filter(r=>r.날짜&&r.날짜.startsWith(thisMonth)).reduce((s,r)=>s+(r.수입수량||0),0);
+    const monthOut = outData.filter(r=>r.날짜&&r.날짜.startsWith(thisMonth)).reduce((s,r)=>s+(r.수량||0),0);
+
+    // 지표
     document.getElementById('m-lots').textContent = lotList.length;
-    document.getElementById('m-total-in').textContent = totalIn.toLocaleString();
-    document.getElementById('m-total-out').textContent = totalOut.toLocaleString();
-    document.getElementById('m-stock').textContent = (totalIn-totalOut).toLocaleString();
+    document.getElementById('m-stock').textContent = totalStock.toLocaleString();
+    document.getElementById('m-stock-kg').textContent = totalKg ? totalKg.toLocaleString()+' KG' : '—';
+    document.getElementById('m-month-in').textContent = monthIn.toLocaleString();
+    document.getElementById('m-month-out').textContent = monthOut.toLocaleString();
 
-    // Lot별 테이블
+    // 경고 배너
+    const alerts = [];
+    lotList.forEach(l => {
+      const stock = l.in - l.out;
+      // 마이너스 재고
+      if(stock < 0) alerts.push({type:'danger', msg:`⚠️ ${l.lot번호} — 재고 마이너스 (${stock})`});
+      // 재고 부족 (50 미만)
+      else if(stock > 0 && stock < 50) alerts.push({type:'warning', msg:`🔶 ${l.lot번호} — 재고 부족 (${stock}EA 남음)`});
+      // 오래된 Lot (6개월 이상)
+      if(l.수입일 && l.수입일 !== '—') {
+        const months = (now - new Date(l.수입일)) / (1000*60*60*24*30);
+        if(months >= 6) alerts.push({type:'info', msg:`📦 ${l.lot번호} — 입고 후 ${Math.floor(months)}개월 경과`});
+      }
+    });
+    document.getElementById('alert-banner').innerHTML = alerts.length
+      ? alerts.map(a=>`<div class="alert-item alert-${a.type}">${a.msg}</div>`).join('')
+      : '';
+
+    // Lot별 테이블 (소진예상일 포함)
     if(!lotList.length) {
       document.getElementById('lot-table-wrap').innerHTML = '<div class="empty">입고 데이터가 없습니다.</div>';
     } else {
       document.getElementById('lot-table-wrap').innerHTML = `<table class="dash-table">
-        <thead><tr><th>Lot 번호</th><th>수입일</th><th>총 입고</th><th>총 출고</th><th>현재고</th><th>상태</th><th></th></tr></thead>
+        <thead><tr>
+          <th>Lot 번호</th><th>수입일</th><th>현재고 (EA)</th><th>KG</th>
+          <th>소진 예상일</th><th>경과</th><th>상태</th><th></th>
+        </tr></thead>
         <tbody>${lotList.map(l=>{
-          const stock=l.in-l.out;
-          const badge = stock<=0?'<span class="badge badge-out">소진</span>':stock<50?'<span class="badge badge-low">부족 주의</span>':'<span class="badge badge-ok">정상</span>';
-          return `<tr>
+          const stock = l.in - l.out;
+          // 소진 예상일: 최근 30일 평균 출고량 기준
+          let estDate = '—';
+          if(stock > 0 && l.out30 > 0) {
+            const dailyRate = l.out30 / 30;
+            const daysLeft = Math.ceil(stock / dailyRate);
+            const est = new Date(now.getTime() + daysLeft*24*60*60*1000);
+            estDate = est.toISOString().split('T')[0] + ` (${daysLeft}일)`;
+          } else if(stock > 0) {
+            estDate = '출고 없음';
+          }
+          // 경과일
+          let elapsed = '—';
+          if(l.수입일 && l.수입일 !== '—') {
+            const days = Math.floor((now - new Date(l.수입일)) / (1000*60*60*24));
+            const months = Math.floor(days/30);
+            elapsed = months > 0 ? `${months}개월 ${days%30}일` : `${days}일`;
+          }
+          // 배지
+          const badge = stock<0
+            ? '<span class="badge badge-out">마이너스</span>'
+            : stock===0 ? '<span class="badge badge-out">소진</span>'
+            : stock<50 ? '<span class="badge badge-low">부족 주의</span>'
+            : '<span class="badge badge-ok">정상</span>';
+
+          const rowStyle = stock<0 ? 'background:#fff5f5' : '';
+          return `<tr style="${rowStyle}">
             <td style="font-family:var(--mono);font-size:12px;color:var(--accent)">${l.lot번호}</td>
             <td>${l.수입일||'—'}</td>
-            <td>${l.in.toLocaleString()}</td>
-            <td>${l.out.toLocaleString()}</td>
-            <td><strong>${stock.toLocaleString()}</strong></td>
+            <td><strong style="color:${stock<0?'var(--danger)':''}">${stock.toLocaleString()}</strong></td>
+            <td>${l.kg_total?l.kg_total.toLocaleString()+' KG':'—'}</td>
+            <td style="font-size:12px">${estDate}</td>
+            <td style="font-size:12px;color:var(--text-muted)">${elapsed}</td>
             <td>${badge}</td>
-            <td style="white-space:nowrap">
-              <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px" onclick="goToInboundHistory('${l.lot번호}')">이력 보기 / 수정</button>
-            </td>
+            <td><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px" onclick="goToInboundHistory('${l.lot번호}')">이력 / 수정</button></td>
           </tr>`;
         }).join('')}</tbody>
       </table>`;
