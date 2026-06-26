@@ -171,6 +171,15 @@
     .badge-out { background:var(--danger-bg); color:var(--danger); }
     @media(max-width:700px){ .metrics{grid-template-columns:1fr 1fr;} }
 
+    /* ── 모달 ── */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:200; display:none; align-items:center; justify-content:center; }
+    .modal-overlay.show { display:flex; }
+    .modal { background:var(--surface); border-radius:var(--radius); padding:24px; width:540px; max-width:95vw; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-title { font-size:15px; font-weight:700; margin-bottom:18px; }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+    .btn-danger { background:var(--danger-bg); color:var(--danger); border:1px solid #fecaca; }
+    .btn-danger:hover { background:#fecaca; }
+
     @media(max-width:700px){
       .header{padding:0 14px;} .main{padding:14px;}
       .form-grid{grid-template-columns:1fr;} .filter-bar{flex-direction:column;}
@@ -188,7 +197,7 @@
     <button class="nav-btn" onclick="showPanel('dashboard',this)">재고 현황</button>
     <button class="nav-btn" onclick="showPanel('excelview',this)">엑셀 뷰</button>
     <button class="nav-btn" onclick="showPanel('grade',this)">Grade 관리</button>
-    <button class="btn-export" onclick="exportAll()">↓ 엑셀 다운로드</button>
+
   </nav>
 </header>
 
@@ -223,6 +232,7 @@
         <select id="excel-vendor-filter" onchange="loadExcelView()" style="min-width:140px;padding:6px 10px;border-radius:7px;border:1px solid var(--border-strong);font-size:13px;background:var(--surface)">
           <option value="">전체 업체</option>
         </select>
+        <button class="btn-export" onclick="exportAll()">↓ 엑셀 다운로드</button>
       </div>
     </div>
     <div class="excel-wrap">
@@ -323,6 +333,50 @@
 </main>
 
 <div class="toast" id="toast"></div>
+
+<!-- ── 입고 수정 모달 ── -->
+<div class="modal-overlay" id="modal-inbound">
+  <div class="modal">
+    <div class="modal-title">입고 수정</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Lot 번호</label><input type="text" id="edit-in-lot"></div>
+      <div class="form-group"><label>수입일자</label><input type="date" id="edit-in-date"></div>
+      <div class="form-group"><label>생산일자</label><input type="date" id="edit-in-prod-date"></div>
+      <div class="form-group"><label>수입 수량 (EA)</label><input type="number" id="edit-in-qty"></div>
+      <div class="form-group"><label>생산 수량</label><input type="number" id="edit-in-prod-qty"></div>
+      <div class="form-group"><label>Grade / Status</label><input type="text" id="edit-in-grade" list="grade-list"></div>
+      <div class="form-group"><label>KG / 단위</label><input type="number" id="edit-in-kg-unit" step="0.01"></div>
+      <div class="form-group"><label>총 KG</label><input type="number" id="edit-in-kg-total" step="0.01"></div>
+      <div class="form-group"><label>Packaging</label><select id="edit-in-pack"><option>Pail</option><option>Drum</option><option>Box</option><option>기타</option></select></div>
+      <div class="form-group"><label>운송 방법</label><select id="edit-in-ship"><option>해상</option><option>항공</option></select></div>
+      <div class="form-group"><label>창고</label><input type="text" id="edit-in-warehouse"></div>
+      <div class="form-group"><label>Customer</label><input type="text" id="edit-in-customer"></div>
+      <div class="form-group form-full"><label>비고</label><input type="text" id="edit-in-note"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-inbound')">취소</button>
+      <button class="btn btn-primary" onclick="saveInbound()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 출고 수정 모달 ── -->
+<div class="modal-overlay" id="modal-outbound">
+  <div class="modal">
+    <div class="modal-title">출고 수정</div>
+    <div class="form-grid">
+      <div class="form-group"><label>출고일자</label><input type="date" id="edit-out-date"></div>
+      <div class="form-group"><label>업체</label><input type="text" id="edit-out-vendor"></div>
+      <div class="form-group"><label>Lot 번호</label><input type="text" id="edit-out-lot"></div>
+      <div class="form-group"><label>수량</label><input type="number" id="edit-out-qty"></div>
+      <div class="form-group form-full"><label>비고</label><input type="text" id="edit-out-note"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-outbound')">취소</button>
+      <button class="btn btn-primary" onclick="saveOutbound()">저장</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const SUPABASE_URL = 'https://pvwwfkqclhljzzaqxamv.supabase.co';
@@ -490,10 +544,10 @@
       <th>Status</th><th>Grade</th><th>Order No.</th><th>Production Date</th>
       <th>Import Date</th><th>입고일자</th><th>Packaging</th><th>Batch No.</th>
       <th>EA</th><th>Quantity(KG)</th><th>Shipment</th><th>Quilt여부</th>
-      <th>Customer</th><th>Remarks</th><th>Warehouse</th><th>Comment</th>
+      <th>Customer</th><th>Remarks</th><th>Warehouse</th><th>Comment</th><th></th>
     </tr></thead><tbody>`;
-    if(!inData.length){html2+=`<tr><td colspan="16" class="empty">입고 데이터가 없습니다.</td></tr>`;}
-    else{inData.forEach(r=>{html2+=`<tr><td>입고</td><td>${r.grade||''}</td><td></td><td>${r.생산일자||''}</td><td>${r.날짜||''}</td><td>${r.날짜||''}</td><td>${r.packaging||''}</td><td style="font-family:var(--mono);font-size:11px">${r.lot번호||''}</td><td style="text-align:right">${r.수입수량||0}</td><td style="text-align:right">${(r.kg_total||0).toLocaleString()}</td><td>${r.운송||''}</td><td></td><td>${r.customer||''}</td><td>${r.비고||''}</td><td>${r.창고||''}</td><td></td></tr>`;});}
+    if(!inData.length){html2+=`<tr><td colspan="17" class="empty">입고 데이터가 없습니다.</td></tr>`;}
+    else{inData.forEach(r=>{html2+=`<tr><td>입고</td><td>${r.grade||''}</td><td></td><td>${r.생산일자||''}</td><td>${r.날짜||''}</td><td>${r.날짜||''}</td><td>${r.packaging||''}</td><td style="font-family:var(--mono);font-size:11px">${r.lot번호||''}</td><td style="text-align:right">${r.수입수량||0}</td><td style="text-align:right">${(r.kg_total||0).toLocaleString()}</td><td>${r.운송||''}</td><td></td><td>${r.customer||''}</td><td>${r.비고||''}</td><td>${r.창고||''}</td><td></td><td style="white-space:nowrap"><button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;margin-right:4px" onclick='openEditInbound(${JSON.stringify(r)})'>수정</button><button class="btn btn-danger" style="padding:3px 10px;font-size:11px" onclick="deleteInbound(${r.id})">삭제</button></td></tr>`;});}
     html2+=`</tbody></table>`;
     document.getElementById('inbound-table').innerHTML=html2;
   }
@@ -583,11 +637,15 @@
     if(error) return toast('오류: '+error.message,'error');
     if(!data||!data.length){document.getElementById('history-table').innerHTML='<div class="empty">출고 이력이 없습니다.</div>';return;}
     document.getElementById('history-table').innerHTML=`<table class="inbound-table">
-      <thead><tr><th>날짜</th><th>업체</th><th>Lot 번호</th><th>수량</th><th>비고</th></tr></thead>
+      <thead><tr><th>날짜</th><th>업체</th><th>Lot 번호</th><th>수량</th><th>비고</th><th></th></tr></thead>
       <tbody>${data.map(r=>`<tr>
         <td>${r.날짜}</td><td>${r.업체}</td>
         <td style="font-family:var(--mono);font-size:11px">${r.lot번호}</td>
         <td style="text-align:right">${r.수량}</td><td>${r.비고||''}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;margin-right:4px" onclick='openEditOutbound(${JSON.stringify(r)})'>수정</button>
+          <button class="btn btn-danger" style="padding:3px 10px;font-size:11px" onclick="deleteOutbound(${r.id})">삭제</button>
+        </td>
       </tr>`).join('')}</tbody></table>`;
   }
 
@@ -595,6 +653,102 @@
     ['f-vendor','f-lot','f-from','f-to'].forEach(id=>document.getElementById(id).value='');
     loadHistory();
   }
+
+  // ── 수정/삭제 함수 ─────────────────────────────────────────
+  let _editId = null;
+
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  // 입고 수정
+  function openEditInbound(r) {
+    _editId = r.id;
+    document.getElementById('edit-in-lot').value = r.lot번호||'';
+    document.getElementById('edit-in-date').value = r.날짜||'';
+    document.getElementById('edit-in-prod-date').value = r.생산일자||'';
+    document.getElementById('edit-in-qty').value = r.수입수량||0;
+    document.getElementById('edit-in-prod-qty').value = r.생산수량||0;
+    document.getElementById('edit-in-grade').value = r.grade||'';
+    document.getElementById('edit-in-kg-unit').value = r.kg_per_unit||'';
+    document.getElementById('edit-in-kg-total').value = r.kg_total||'';
+    document.getElementById('edit-in-pack').value = r.packaging||'';
+    document.getElementById('edit-in-ship').value = r.운송||'';
+    document.getElementById('edit-in-warehouse').value = r.창고||'';
+    document.getElementById('edit-in-customer').value = r.customer||'';
+    document.getElementById('edit-in-note').value = r.비고||'';
+    document.getElementById('modal-inbound').classList.add('show');
+  }
+
+  async function saveInbound() {
+    const {error} = await db.from('입고').update({
+      lot번호: document.getElementById('edit-in-lot').value,
+      날짜: document.getElementById('edit-in-date').value,
+      생산일자: document.getElementById('edit-in-prod-date').value||null,
+      수입수량: parseInt(document.getElementById('edit-in-qty').value)||0,
+      생산수량: parseInt(document.getElementById('edit-in-prod-qty').value)||0,
+      grade: document.getElementById('edit-in-grade').value||null,
+      kg_per_unit: parseFloat(document.getElementById('edit-in-kg-unit').value)||null,
+      kg_total: parseFloat(document.getElementById('edit-in-kg-total').value)||null,
+      packaging: document.getElementById('edit-in-pack').value||null,
+      운송: document.getElementById('edit-in-ship').value||null,
+      창고: document.getElementById('edit-in-warehouse').value||null,
+      customer: document.getElementById('edit-in-customer').value||null,
+      비고: document.getElementById('edit-in-note').value||null,
+    }).eq('id', _editId);
+    if(error) return toast('오류: '+error.message,'error');
+    toast('수정 완료!');
+    closeModal('modal-inbound');
+    loadExcelView();
+    loadDashboard();
+  }
+
+  async function deleteInbound(id) {
+    if(!confirm('이 입고 기록을 삭제할까요?')) return;
+    const {error} = await db.from('입고').delete().eq('id', id);
+    if(error) return toast('오류: '+error.message,'error');
+    toast('삭제 완료!');
+    loadExcelView();
+    loadDashboard();
+  }
+
+  // 출고 수정
+  function openEditOutbound(r) {
+    _editId = r.id;
+    document.getElementById('edit-out-date').value = r.날짜||'';
+    document.getElementById('edit-out-vendor').value = r.업체||'';
+    document.getElementById('edit-out-lot').value = r.lot번호||'';
+    document.getElementById('edit-out-qty').value = r.수량||0;
+    document.getElementById('edit-out-note').value = r.비고||'';
+    document.getElementById('modal-outbound').classList.add('show');
+  }
+
+  async function saveOutbound() {
+    const {error} = await db.from('출고').update({
+      날짜: document.getElementById('edit-out-date').value,
+      업체: document.getElementById('edit-out-vendor').value,
+      lot번호: document.getElementById('edit-out-lot').value,
+      수량: parseInt(document.getElementById('edit-out-qty').value)||0,
+      비고: document.getElementById('edit-out-note').value||null,
+    }).eq('id', _editId);
+    if(error) return toast('오류: '+error.message,'error');
+    toast('수정 완료!');
+    closeModal('modal-outbound');
+    loadHistory();
+    loadDashboard();
+  }
+
+  async function deleteOutbound(id) {
+    if(!confirm('이 출고 기록을 삭제할까요?')) return;
+    const {error} = await db.from('출고').delete().eq('id', id);
+    if(error) return toast('오류: '+error.message,'error');
+    toast('삭제 완료!');
+    loadHistory();
+    loadDashboard();
+  }
+
+  // 모달 오버레이 클릭 시 닫기
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if(e.target===el) el.classList.remove('show'); });
+  });
 
   // ── 엑셀 Export (원본 100% 동일) ───────────────────────────
   async function exportAll() {
@@ -606,6 +760,10 @@
     const inData=inRes.data||[], outData=outRes.data||[];
     const wb=XLSX.utils.book_new();
 
+    // 업체 필터 적용
+    const selectedVendor = (document.getElementById('excel-vendor-filter')||{}).value || '';
+    const filteredOutData = selectedVendor ? outData.filter(r=>r.업체===selectedVendor) : outData;
+
     // ── 시트1: 출고 ──
     {
       const lotMap={};
@@ -614,10 +772,10 @@
         lotMap[r.lot번호].수입수량+=r.수입수량||0;
         lotMap[r.lot번호].생산수량+=r.생산수량||0;
       });
-      const rawDates=[...new Set(outData.map(r=>r.날짜))].sort();
+      const rawDates=[...new Set(filteredOutData.map(r=>r.날짜))].sort();
       const fmtDate=d=>{const[,m,day]=d.split('-');return`${m}/${day}`;};
       const outByLotDate={};
-      outData.forEach(r=>{
+      filteredOutData.forEach(r=>{
         if(!outByLotDate[r.lot번호]) outByLotDate[r.lot번호]={};
         outByLotDate[r.lot번호][r.날짜]=(outByLotDate[r.lot번호][r.날짜]||0)+r.수량;
       });
@@ -709,7 +867,8 @@
       XLSX.utils.book_append_sheet(wb,ws,'수입 입고');
     }
 
-    XLSX.writeFile(wb,`재고관리_${today()}.xlsx`);
+    const fname = selectedVendor ? `재고관리_${selectedVendor}_${today()}.xlsx` : `재고관리_${today()}.xlsx`;
+    XLSX.writeFile(wb, fname);
     toast('엑셀 다운로드 완료!');
   }
 
