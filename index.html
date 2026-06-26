@@ -192,6 +192,7 @@
   <div class="logo"><div class="logo-dot"></div>재고 관리</div>
   <nav class="nav">
     <button class="nav-btn active" onclick="showPanel('inbound',this)">입고 등록</button>
+    <button class="nav-btn" onclick="showPanel('inbound-history',this)">입고 이력</button>
     <button class="nav-btn" onclick="showPanel('outbound',this)">출고 등록</button>
     <button class="nav-btn" onclick="showPanel('history',this)">출고 이력</button>
     <button class="nav-btn" onclick="showPanel('dashboard',this)">재고 현황</button>
@@ -264,6 +265,21 @@
     <div class="card">
       <div class="card-header">등록된 Grade 목록</div>
       <div id="grade-table-wrap"><div class="loading">불러오는 중...</div></div>
+    </div>
+  </div>
+
+  <!-- ── 입고 이력 ── -->
+  <div id="panel-inbound-history" class="panel">
+    <div class="section-header"><div class="section-title">입고 이력</div></div>
+    <div class="filter-bar">
+      <div><label>Lot 번호</label><select id="ih-lot" onchange="loadInboundHistory()"><option value="">전체</option></select></div>
+      <div><label>Grade</label><select id="ih-grade" onchange="loadInboundHistory()"><option value="">전체</option></select></div>
+      <div><label>시작일</label><input type="date" id="ih-from" onchange="loadInboundHistory()"></div>
+      <div><label>종료일</label><input type="date" id="ih-to" onchange="loadInboundHistory()"></div>
+      <button class="btn btn-ghost" onclick="clearInboundFilters()">초기화</button>
+    </div>
+    <div class="card">
+      <div id="inbound-history-wrap"><div class="loading">불러오는 중...</div></div>
     </div>
   </div>
 
@@ -654,6 +670,57 @@
     loadHistory();
   }
 
+  // ── 입고 이력 ──────────────────────────────────────────────
+  async function loadInboundHistoryFilters() {
+    const {data} = await db.from('입고').select('lot번호, grade');
+    const lots = [...new Set((data||[]).map(r=>r.lot번호).filter(Boolean))];
+    const grades = [...new Set((data||[]).map(r=>r.grade).filter(Boolean))];
+    document.getElementById('ih-lot').innerHTML = '<option value="">전체</option>' + lots.map(l=>`<option>${l}</option>`).join('');
+    document.getElementById('ih-grade').innerHTML = '<option value="">전체</option>' + grades.map(g=>`<option>${g}</option>`).join('');
+  }
+
+  async function loadInboundHistory() {
+    let query = db.from('입고').select('*').order('날짜', {ascending:false});
+    const lot = document.getElementById('ih-lot').value;
+    const grade = document.getElementById('ih-grade').value;
+    const from = document.getElementById('ih-from').value;
+    const to = document.getElementById('ih-to').value;
+    if(lot) query = query.eq('lot번호', lot);
+    if(grade) query = query.eq('grade', grade);
+    if(from) query = query.gte('날짜', from);
+    if(to) query = query.lte('날짜', to);
+    const {data, error} = await query;
+    if(error) return toast('오류: '+error.message, 'error');
+    if(!data||!data.length) { document.getElementById('inbound-history-wrap').innerHTML='<div class="empty">입고 이력이 없습니다.</div>'; return; }
+    document.getElementById('inbound-history-wrap').innerHTML = `<table class="inbound-table">
+      <thead><tr>
+        <th>수입일자</th><th>Lot 번호</th><th>Grade</th><th>수입 수량</th>
+        <th>총 KG</th><th>Packaging</th><th>운송</th><th>창고</th><th>Customer</th><th>비고</th><th></th>
+      </tr></thead>
+      <tbody>${data.map(r=>`<tr>
+        <td>${r.날짜||''}</td>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--accent)">${r.lot번호||''}</td>
+        <td>${r.grade||''}</td>
+        <td style="text-align:right">${r.수입수량||0}</td>
+        <td style="text-align:right">${r.kg_total?r.kg_total.toLocaleString():''}</td>
+        <td>${r.packaging||''}</td>
+        <td>${r.운송||''}</td>
+        <td>${r.창고||''}</td>
+        <td>${r.customer||''}</td>
+        <td>${r.비고||''}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-ghost" style="padding:3px 10px;font-size:11px;margin-right:4px" onclick='openEditInbound(${JSON.stringify(r)})'>수정</button>
+          <button class="btn btn-danger" style="padding:3px 10px;font-size:11px" onclick="deleteInbound(${r.id})">삭제</button>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  }
+
+  function clearInboundFilters() {
+    ['ih-lot','ih-grade','ih-from','ih-to'].forEach(id=>document.getElementById(id).value='');
+    loadInboundHistory();
+  }
+
   // ── 수정/삭제 함수 ─────────────────────────────────────────
   let _editId = null;
 
@@ -699,6 +766,7 @@
     closeModal('modal-inbound');
     loadExcelView();
     loadDashboard();
+    if(document.getElementById('panel-inbound-history').classList.contains('active')) loadInboundHistory();
   }
 
   async function deleteInbound(id) {
@@ -708,6 +776,7 @@
     toast('삭제 완료!');
     loadExcelView();
     loadDashboard();
+    if(document.getElementById('panel-inbound-history').classList.contains('active')) loadInboundHistory();
   }
 
   // 출고 수정
