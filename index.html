@@ -365,16 +365,21 @@
   <div id="panel-inbound" class="panel active">
     <div class="section-header"><div class="section-title">입고 등록</div></div>
     <div class="card">
-      <div class="card-header">입고 정보</div>
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span>입고 정보</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted)">
+          <span style="color:var(--danger);font-weight:600">*</span> 필수 입력 &nbsp;|&nbsp; 나머지는 선택 입력
+        </span>
+      </div>
       <div class="form-grid">
-        <div class="form-group"><label>Lot 번호 (Batch No.)</label><input type="text" id="in-lot" placeholder="예: BP9A0920A0"></div>
-        <div class="form-group"><label>수입일자</label><input type="date" id="in-date"></div>
+        <div class="form-group"><label>Lot 번호 (Batch No.) <span style="color:var(--danger)">*</span></label><input type="text" id="in-lot" placeholder="예: BP9A0920A0"></div>
+        <div class="form-group"><label>수입일자 <span style="color:var(--danger)">*</span></label><input type="date" id="in-date"></div>
         <div class="form-group"><label>생산일자</label><input type="date" id="in-prod-date"></div>
         <div class="form-group"><label>Grade / Status</label>
           <input type="text" id="in-grade" placeholder="예: DVSTS029" list="grade-list" autocomplete="off" oninput="updateKg()">
           <datalist id="grade-list"></datalist>
         </div>
-        <div class="form-group"><label>수입 수량 (EA)</label><input type="number" id="in-qty" placeholder="0" min="0" oninput="updateKg()"></div>
+        <div class="form-group"><label>수입 수량 (EA) <span style="color:var(--danger)">*</span></label><input type="number" id="in-qty" placeholder="0" min="0" oninput="updateKg()"></div>
         <div class="form-group"><label>생산 수량 (EA)</label><input type="number" id="in-prod-qty" placeholder="0" min="0"></div>
         <div class="form-group"><label>KG / 단위 <span id="kg-unit-label" style="color:var(--accent);font-weight:600"></span></label>
           <input type="number" id="in-kg-unit" placeholder="자동입력 (직접 수정 가능)" step="0.01" oninput="updateKg()">
@@ -385,9 +390,10 @@
         <div class="form-group"><label>운송 방법</label><select id="in-ship"><option value="">선택</option><option>해상</option><option>항공</option></select></div>
         <div class="form-group"><label>Packaging</label><select id="in-pack"><option value="">선택</option><option>Pail</option><option>Drum</option><option>Box</option><option>기타</option></select></div>
         <div class="form-group"><label>창고</label><input type="text" id="in-warehouse" placeholder="예: 용인"></div>
-        <div class="form-group"><label>Customer</label><input type="text" id="in-customer" placeholder="업체명"></div>
+        <div class="form-group"><label>Customer <span style="color:var(--text-muted);font-weight:400;font-size:10px">(선택)</span></label><input type="text" id="in-customer" placeholder="업체명"></div>
         <div class="form-group form-full"><label>비고</label><input type="text" id="in-note" placeholder="메모 (선택)"></div>
       </div>
+
       <div class="form-actions"><button class="btn btn-primary" onclick="submitInbound()">입고 등록</button></div>
     </div>
   </div>
